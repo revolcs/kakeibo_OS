@@ -739,13 +739,25 @@ $("yIn").onchange=()=>{const y=parseInt($("yIn").value);if(y>=2000&&y<=2100)go(y
 $("mIn").onchange=()=>go(view.y,+$("mIn").value);
 $("goToday").onclick=()=>{const t=new Date();go(t.getFullYear(),t.getMonth()+1)};
 
-/* 日夜模式：記住自己揀嘅，未揀就跟手機 */
-const darkMQ=window.matchMedia?matchMedia("(prefers-color-scheme: dark)"):null;
-const isDark=()=>{const t=document.documentElement.dataset.theme;return t?t==="dark":!!darkMQ?.matches};
-function paintTheme(){const d=isDark();$("themeBtn").textContent=d?"☀️":"🌙";$("themeBtn").setAttribute("aria-label",d?"轉日間模式":"轉夜間模式")}
-{const t=ls.get("kk-theme");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t}
-$("themeBtn").onclick=()=>{const next=isDark()?"light":"dark";document.documentElement.dataset.theme=next;ls.set("kk-theme",next);paintTheme();toast(next==="dark"?"夜間模式 🌙":"日間模式 ☀️")};
-darkMQ?.addEventListener?.("change",paintTheme);paintTheme();
+/* 日夜模式：自動（19:00–06:00 夜間，其餘日間）／ 日間 ／ 夜間，記住自己揀嘅 */
+const TH_MODES=["auto","light","dark"];
+const TH_ICON={auto:"🌗",light:"☀️",dark:"🌙"};
+const TH_LABEL={auto:"自動（按時間）",light:"日間模式",dark:"夜間模式"};
+let themeMode="auto";
+try{const t=ls.get("kk-theme");if(TH_MODES.includes(t))themeMode=t}catch(e){}
+const autoIsDark=()=>{const h=new Date().getHours();return h>=19||h<6};
+function applyThemeMode(){
+  const d=themeMode==="auto"?autoIsDark():themeMode==="dark";
+  document.documentElement.dataset.theme=d?"dark":"light";
+  const b=$("themeBtn");b.textContent=TH_ICON[themeMode];b.setAttribute("aria-label","日夜模式："+TH_LABEL[themeMode]);
+}
+$("themeBtn").onclick=()=>{
+  themeMode=TH_MODES[(TH_MODES.indexOf(themeMode)+1)%TH_MODES.length];
+  try{ls.set("kk-theme",themeMode)}catch(e){}
+  applyThemeMode();toast(TH_LABEL[themeMode]+" "+TH_ICON[themeMode]);
+};
+setInterval(()=>{if(themeMode==="auto")applyThemeMode()},60000);
+applyThemeMode();
 function paintHide(){$("hideBtn").textContent=HIDE?"🙈":"🙉";$("hideBtn").setAttribute("aria-label",HIDE?"顯示金額":"隱藏金額");$("hideBtn").setAttribute("aria-pressed",HIDE)}
 $("hideBtn").onclick=()=>{HIDE=!HIDE;try{localStorage.setItem("kk-hide",HIDE?"1":"0")}catch(e){}paintHide();render();drawSheet();toast(HIDE?"金額已隱藏 🙈":"金額顯示中 🙉")};
 paintHide();
