@@ -17,18 +17,18 @@
 :root{
   --paper:#f3f3ee; --sheet:#ffffff; --ink:#111214; --soft:#6a6c72; --line:#dcdcd4;
   --neon:#a3ffc9; --neon-ink:#111214; --pink:#ff3d6e; --pink-ink:#fff; --sky:#2fb8ff; --gold:#ffcf4a; --ok:#14a364;
-  --tile:#ebebe4; --shadow:#111214; --sun:#ff3d6e; --sat:#2f7dff; --today:#ffe36b;
+  --tile:#ebebe4; --shadow:#111214; --sun:#ff3d6e; --sat:#2f7dff; --today:#ffe36b; --big:#7b5cff; --zero:#8f5a00;
   --f-body:"Huninn","Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
   --f-num:"Space Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --paper:#130a11; --sheet:#1e1119; --ink:#f7eef3; --soft:#b39aa8; --line:#3a2533;
   --neon:#ff4fb8; --neon-ink:#1a0712; --pink:#ff5c85; --pink-ink:#fff; --sky:#5cc8ff; --gold:#ffd666; --ok:#4fe39a;
-  --tile:#2a1823; --shadow:rgba(255,79,184,.6); --sun:#ff7a9c; --sat:#8fb4ff; --today:#5a3a10; color-scheme:dark}}
+  --tile:#2a1823; --shadow:rgba(255,79,184,.6); --sun:#ff7a9c; --sat:#8fb4ff; --today:#5a3a10; --big:#9d86ff; --zero:#ffd666; color-scheme:dark}}
 :root[data-theme="dark"]{
   --paper:#130a11; --sheet:#1e1119; --ink:#f7eef3; --soft:#b39aa8; --line:#3a2533;
   --neon:#ff4fb8; --neon-ink:#1a0712; --pink:#ff5c85; --pink-ink:#fff; --sky:#5cc8ff; --gold:#ffd666; --ok:#4fe39a;
-  --tile:#2a1823; --shadow:rgba(255,79,184,.6); --sun:#ff7a9c; --sat:#8fb4ff; --today:#5a3a10; color-scheme:dark}
+  --tile:#2a1823; --shadow:rgba(255,79,184,.6); --sun:#ff7a9c; --sat:#8fb4ff; --today:#5a3a10; --big:#9d86ff; --zero:#ffd666; color-scheme:dark}
 
 *{box-sizing:border-box}
 body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
@@ -90,10 +90,11 @@ input.f:focus{border-color:var(--ink);outline:none}
 .day.s0 .d{color:var(--sun)}.day.s6 .d{color:var(--sat)}
 .day .amt{font-family:var(--f-num);font-size:.64rem;line-height:1.4;letter-spacing:-.03em;max-width:100%;white-space:nowrap}
 .day .tag{margin-top:auto;font-size:.72rem;line-height:1.1;min-height:.8rem;white-space:nowrap;letter-spacing:-.1em}
+.day .amt.z0{color:var(--zero);font-family:inherit;font-weight:900;font-size:.78rem;letter-spacing:0}
 .day .tag .pl{opacity:.45}
 .day.has{border-color:var(--ink);box-shadow:2px 2px 0 var(--shadow)}
 .day.zero{background:color-mix(in srgb,var(--gold) 28%,var(--sheet));border-color:var(--ink)}
-.day.big{background:color-mix(in srgb,var(--pink) 18%,var(--sheet))}
+.day.big{background:color-mix(in srgb,var(--big) 20%,var(--sheet));border-color:color-mix(in srgb,var(--big) 55%,var(--line))}
 .day.today{outline:3px solid var(--neon);outline-offset:1px}
 .day.adj{opacity:.42;border-style:dashed;box-shadow:none}
 .day.hol{background:color-mix(in srgb,var(--sun) 12%,var(--sheet))}
@@ -111,6 +112,19 @@ input.f:focus{border-color:var(--ink);outline:none}
 .editbar span{flex:1}
 .nextpay{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.82rem}
 .nextpay input{font-family:var(--f-num)}
+.nextpay{flex-direction:column;align-items:stretch;gap:5px}
+.payln{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.payln .pm{min-width:4.6em;font-weight:900;opacity:.75}
+.payln.past{opacity:.6}
+.hols .past b,.hols .past span{text-decoration:line-through;opacity:.5}
+.day .hn.hs{-webkit-line-clamp:1;line-clamp:1;white-space:nowrap;font-size:.5rem;line-height:1.2}
+.day.holpast .hn{text-decoration:line-through;opacity:.6}
+@media (pointer:coarse){#cal{touch-action:pan-x pinch-zoom}}
+#cal.sl-up{animation:calUp .24s ease}
+#cal.sl-dn{animation:calDn .24s ease}
+@keyframes calUp{from{transform:translateY(22px);opacity:.25}to{transform:none;opacity:1}}
+@keyframes calDn{from{transform:translateY(-22px);opacity:.25}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#cal.sl-up,#cal.sl-dn{animation:none}}
 .hint{font-size:.75rem;color:var(--soft)}
 .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:.75rem;color:var(--soft)}
 
@@ -235,7 +249,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   <section class="card" aria-labelledby="calH">
     <h2 id="calH">📅 <span id="calTitle"></span> <small id="monthSum"></small></h2>
     <div class="cal" id="cal"></div>
-    <div class="legend"><span>⭐ 零消費</span><span>🐷 有儲錢</span><span>💰 出糧日（淡色 = 預計）</span><span style="color:var(--sun)">紅字 = 公眾假期</span><span>粉紅格 = 單日 $1,000+</span><span>虛線格 = 上／下個月</span></div>
+    <div class="legend"><span><b style="color:var(--zero)">0！</b> 零消費</span><span>🐷 有儲錢</span><span>💰 出糧日（淡色 = 預計）</span><span style="color:var(--sun)">紅字 = 公眾假期</span><span style="color:var(--big)">紫色格 = 單日 $2,000+</span><span>虛線格 = 上／下個月</span><span>👆 手機：喺月曆上下撥 = 轉月</span></div>
     <div class="hols" id="hols"></div>
   </section>
 
@@ -348,6 +362,8 @@ const HOL={
 "2027-03-26":"耶穌受難節","2027-03-27":"受難節翌日","2027-03-29":"復活節星期一","2027-04-05":"清明節",
 "2027-05-01":"勞動節","2027-05-13":"佛誕","2027-06-09":"端午節","2027-07-01":"回歸紀念日"};
 const HOL_UNTIL="2027-07";
+/* 假期當日有用錢時，格仔放唔晒全名，用民間簡稱 */
+const HOL_SHORT={"一月一日":"元旦","農曆年初一":"年初一","農曆年初二":"年初二","農曆年初三":"年初三","農曆年初四":"年初四","耶穌受難節":"受難節","受難節翌日":"受難翌日","復活節星期一":"復活節","復活節星期一翌日":"復活補假","清明節":"清明","清明節翌日":"清明翌日","勞動節":"勞動節","佛誕":"佛誕","佛誕翌日":"佛誕翌日","端午節":"端午","回歸紀念日":"七一","中秋節翌日":"中秋翌日","國慶日":"國慶","重陽節翌日":"重陽翌日","聖誕節":"聖誕","聖誕節後第一個周日":"拆禮物日"};
 const $=id=>document.getElementById(id);
 /* 🙈 隱藏模式：所有金額顯示做 $*** */
 let HIDE=false;try{HIDE=localStorage.getItem("kk-hide")==="1"}catch(e){}
@@ -414,12 +430,22 @@ function renderCycle(){
   $("daysLeft").style.whiteSpace="pre-line";
   const pr=$("payRow");pr.replaceChildren();
   const lab=document.createElement("b");lab.textContent="💰 出糧日";pr.append(lab);
-  const up=payDates().filter(d=>d>t).slice(0,4);
-  if(!up.length){const h=document.createElement("span");h.className="hint";h.textContent=`未設定，暫時估 ${+c.next.split("-")[1]}/${+c.next.split("-")[2]}。撳月曆日子 →「設為出糧日」`;pr.append(h)}
-  up.forEach(d=>{const ch=document.createElement("button");ch.type="button";ch.className="mini"+(d===c.next?" acc":"");
-    const [yy,mm2,dd]=d.split("-").map(Number);ch.textContent=`${mm2}/${dd}（${WD[new Date(yy,mm2-1,dd).getDay()]}）`;
-    ch.setAttribute("aria-label",`${mm2}月${dd}日出糧，撳入去睇`);ch.onclick=()=>{go(yy,mm2);openSheet(d)};pr.append(ch)});
-  if(up.length){const h=document.createElement("span");h.className="hint";h.textContent="撳月曆日子可以加或者取消";pr.append(h)}
+  const [ty,tm]=t.split("-").map(Number),allPay=payDates();
+  [[-1,"上月"],[0,"本月"],[1,"下月"]].forEach(([o,nm0])=>{
+    let yy=ty,mm=tm+o;if(mm<1){mm=12;yy--}if(mm>12){mm=1;yy++}
+    const pre=`${yy}-${pad(mm)}-`,list=allPay.filter(d=>d.startsWith(pre));
+    if(!list.length&&o<0)return;
+    const ln=document.createElement("div");ln.className="payln";
+    const ml=document.createElement("span");ml.className="pm";ml.textContent=`${nm0}（${mm}月）`;ln.append(ml);
+    if(!list.length){const h=document.createElement("span");h.className="hint";
+      h.textContent=(!c.nextKnown&&c.next.startsWith(pre))?`未標記，暫時估 ${mm}/${+c.next.split("-")[2]}`:"未標記";ln.append(h)}
+    list.forEach(d=>{const [y2,m2,d2]=d.split("-").map(Number),past=d<=t;
+      const ch=document.createElement("button");ch.type="button";ch.className="mini"+(d===c.next?" acc":"");
+      ch.textContent=`${m2}/${d2}（${WD[new Date(y2,m2-1,d2).getDay()]}）${past?" ✅":""}`;
+      ch.setAttribute("aria-label",`${m2}月${d2}日出糧${past?"（已出）":""}，撳入去睇`);ch.onclick=()=>{go(y2,m2);openSheet(d)};ln.append(ch)});
+    if(list.length&&list.every(d=>d<=t))ln.classList.add("past");
+    pr.append(ln)});
+  {const h=document.createElement("span");h.className="hint";h.textContent="撳月曆日子可以加或者取消出糧日";pr.append(h)}
   $("free").textContent=money(free);$("free").classList.toggle("neg",free<0);
   renderSaved();
   $("carryLab").textContent=cr.auto?"上期剩低（自動計）":"上期剩低";
@@ -455,13 +481,14 @@ function dayCell(key,adj){
   const done=paid&&key<=todayStr(),pay=done,plan=!done&&(paid||marked||(key===c.next&&!c.nextKnown));
   const hol=HOL[key];
   const b=document.createElement("button");b.type="button";
-  b.className="day s"+wd+(adj?" adj":"")+(es.length?" has":"")+(zero?" zero":"")+(out>=1000?" big":"")+(key===todayStr()?" today":"")+(pay?" pay":"")+(plan?" plan":"")+(hol?" hol":"");
+  b.className="day s"+wd+(adj?" adj":"")+(es.length?" has":"")+(zero?" zero":"")+(out>=2000?" big":"")+(key===todayStr()?" today":"")+(pay?" pay":"")+(plan?" plan":"")+(hol?" hol"+(key<todayStr()?" holpast":""):"");
   const dn=document.createElement("span");dn.className="d";dn.textContent=d;
   const mid=document.createElement("span");
-  if(hol&&!out){mid.className="hn";mid.textContent=hol}else{mid.className="amt";mid.textContent=out?cellAmt(out):""}
-  const tg=document.createElement("span");tg.className="tag";tg.textContent=(zero?"⭐":"")+(saved?"🐷":"")+(pay?"💰":"");
+  if(hol&&!out&&!zero){mid.className="hn";mid.textContent=hol}else{mid.className="amt"+(zero?" z0":"");mid.textContent=out?cellAmt(out):(zero?"0！":"")}
+  let hs=null;if(hol&&(out||zero)){hs=document.createElement("span");hs.className="hn hs";hs.textContent=HOL_SHORT[hol]||hol}
+  const tg=document.createElement("span");tg.className="tag";tg.textContent=(saved?"🐷":"")+(pay?"💰":"");
   if(plan){const pl=document.createElement("span");pl.className="pl";pl.textContent="💰";tg.append(pl)}
-  b.append(dn,mid,tg);
+  b.append(dn,...(hs?[hs]:[]),mid,tg);
   b.setAttribute("aria-label",`${m}月${d}日${hol?"，"+hol:""}，支出 ${money(out)}${zero?"，零消費":""}`);
   b.onclick=()=>openSheet(key);
   return b;
@@ -488,7 +515,8 @@ function renderCal(){
   if(!list.length){const p=document.createElement("div");p.className="hint";
     p.textContent=`${y}-${pad(m)}`>=HOL_UNTIL?"政府未公佈呢段時間嘅假期":"呢三個月冇公眾假期 (´;ω;`)";hb.append(p)}
   list.forEach(k=>{const [yy,mmm,dd]=k.split("-").map(Number),r=document.createElement("div");
-    if(!keys[1]||!k.startsWith(keys[1]))r.className="adjh";
+    if(!k.startsWith(keys[1]))r.classList.add("adjh");
+    if(k<todayStr()){r.classList.add("past");r.title="已過"}
     const b=document.createElement("b");b.textContent=`${mmm}/${dd}（${WD[new Date(yy,mmm-1,dd).getDay()]}）`;
     const s=document.createElement("span");s.textContent=HOL[k];r.append(b,s);hb.append(r)});
   renderList(mm);renderCats(mm);
@@ -598,14 +626,14 @@ function drawSheet(){
   if(!sel)return;const [y,m,d]=sel.split("-").map(Number);
   $("shTitle").textContent=`${m}月${d}日（${WD[new Date(y,m-1,d).getDay()]}）${HOL[sel]?" 🎌"+HOL[sel]:""}`;
   const es=entries.filter(e=>e.date===sel).sort((a,b)=>(a.ts||0)-(b.ts||0)),box=$("shList");box.replaceChildren();
-  if(!es.length){const p=document.createElement("div");p.className="empty";p.textContent=days[sel]?.zero?"今日零消費 ⭐ 叻！":"呢日未有紀錄";box.append(p)}
+  if(!es.length){const p=document.createElement("div");p.className="empty";p.textContent=days[sel]?.zero?"今日零消費 0！叻！":"呢日未有紀錄";box.append(p)}
   es.forEach(e=>{const r=entryRow(e,()=>startEdit(e));
     const x=document.createElement("button");x.type="button";x.className="mini del";x.textContent="刪";x.setAttribute("aria-label","刪除呢筆");
     x.onclick=ev=>{ev.stopPropagation();if(x.dataset.arm){delEntry(e.id)}else{x.dataset.arm=1;x.textContent="確定？";setTimeout(()=>{if(x.isConnected){delete x.dataset.arm;x.textContent="刪"}},2500)}};
     r.append(x);box.append(r)});
   const zw=$("zeroWrap");zw.replaceChildren();
   if(!es.some(e=>e.kind!=="in")){const b=document.createElement("button");b.type="button";b.className="btn ghost";b.style.width="100%";
-    const on=!!days[sel]?.zero;b.textContent=on?"取消零消費標記":"⭐ 標記呢日零消費";b.onclick=()=>setZero(sel,!on);zw.append(b)}
+    const on=!!days[sel]?.zero;b.textContent=on?"取消零消費標記":"0！標記呢日零消費";b.onclick=()=>setZero(sel,!on);zw.append(b)}
   const paid=es.some(e=>e.cat==="pay"),marked=markedPays().includes(sel),pb=document.createElement("button");
   pb.type="button";pb.className="btn ghost";pb.style.width="100%";pb.style.marginTop="8px";
   if(paid&&!marked){pb.disabled=true;pb.textContent="💰 呢日已經有人工紀錄（就係出糧日）"}
@@ -689,7 +717,7 @@ $("eSave").onclick=async()=>{
   }catch(e){toast("儲唔到："+(e.message||e.code||"再試吓"))}
   b.disabled=false;drawSheet()};
 async function delEntry(id){if(!need())return;try{await db.doc("entries/"+id).delete();if(editId===id)resetForm();toast("刪咗")}catch(e){toast("刪唔到："+(e.message||e.code))}}
-async function setZero(key,on){if(!need())return;try{await db.doc("days/"+key).set({zero:on});toast(on?"零消費 ⭐ 好叻！":"已取消")}catch(e){toast("儲唔到")}}
+async function setZero(key,on){if(!need())return;try{await db.doc("days/"+key).set({zero:on});toast(on?"零消費 0！好叻！":"已取消")}catch(e){toast("儲唔到")}}
 async function setCycle(patch){if(!need())return;const c=cycleOf(todayStr());try{await db.doc("cycles/"+c.start).set({...(cycles[c.start]||{}),...patch})}catch(e){toast("儲唔到")}}
 const setPending=p=>setCycle({pending:p});
 $("pAdd").onclick=()=>{const n=$("pName").value.trim(),a=Math.round(parseFloat($("pAmt").value)*100)/100;
@@ -734,6 +762,18 @@ function fillSettings(){$("sSave").value=settings.saveGoal;$("sFun").value=setti
 /* month nav */
 for(let i=1;i<=12;i++){const o=document.createElement("option");o.value=i;o.textContent=i+"月";$("mIn").append(o)}
 function go(y,m){if(m<1){m=12;y--}if(m>12){m=1;y++}view={y,m};ls.set("kk-view",JSON.stringify(view));renderCal()}
+/* 手機：喺月曆上面用手指向上撥 = 下個月，向下撥 = 上個月 */
+{const cal=$("cal");let sx=0,sy=0,st=0,on=false;
+  cal.addEventListener("touchstart",e=>{if(e.touches.length!==1){on=false;return}const p=e.touches[0];sx=p.clientX;sy=p.clientY;st=Date.now();on=true},{passive:true});
+  cal.addEventListener("touchcancel",()=>{on=false},{passive:true});
+  cal.addEventListener("touchend",e=>{if(!on)return;on=false;
+    const p=e.changedTouches[0],dx=p.clientX-sx,dy=p.clientY-sy;
+    if(Math.abs(dy)<45||Math.abs(dy)<Math.abs(dx)*1.3||Date.now()-st>900)return;
+    if(e.cancelable)e.preventDefault();
+    const up=dy<0;go(view.y,view.m+(up?1:-1));
+    cal.classList.remove("sl-up","sl-dn");void cal.offsetWidth;cal.classList.add(up?"sl-up":"sl-dn");
+  });
+}
 $("prev").onclick=()=>go(view.y,view.m-1);$("next").onclick=()=>go(view.y,view.m+1);
 $("yIn").onchange=()=>{const y=parseInt($("yIn").value);if(y>=2000&&y<=2100)go(y,view.m);else $("yIn").value=view.y};
 $("mIn").onchange=()=>go(view.y,+$("mIn").value);
