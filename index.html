@@ -157,7 +157,6 @@ input.f:focus{border-color:var(--ink);outline:none}
 .brow{display:flex;gap:8px;flex-wrap:wrap}
 .brow .btn{flex:1}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--paper);font-weight:900;font-size:.88rem;padding:8px 16px;border-radius:99px;max-width:90vw}
-.fab{position:fixed;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:20;font:inherit;font-weight:900;font-size:1rem;border:2px solid var(--ink);background:var(--neon);color:var(--neon-ink);border-radius:99px;padding:12px 18px;box-shadow:3px 3px 0 var(--shadow);cursor:pointer}
 .themebtn{flex:none;width:38px;height:38px;border-radius:50%;font-size:1.15rem;line-height:1;border:2px solid var(--ink);background:var(--sheet);color:var(--ink);box-shadow:2px 2px 0 var(--shadow);cursor:pointer;display:grid;place-items:center}
 .themebtn:active{transform:translate(1px,1px)}
 .fx{display:grid;grid-template-columns:2em minmax(0,1fr) auto;gap:4px 8px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line)}
@@ -308,7 +307,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   <p class="foot">資料存喺呢個瀏覽器 💾 ・ 朔幫你睇數中 (¬‿¬)</p>
 
 
-<button class="fab" id="fab" type="button">＋記一筆</button>
 
 <div class="scrim" id="scrim" hidden></div>
 <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="shTitle">
@@ -548,7 +546,7 @@ function renderCats(mm){
   const box=$("cats");box.replaceChildren();
   const tot={};mm.filter(e=>e.kind!=="in").forEach(e=>tot[e.cat]=(tot[e.cat]||0)+e.amt);
   const rows=CATS.filter(c=>tot[c.k]).sort((a,b)=>tot[b.k]-tot[a.k]);
-  if(!rows.length){const p=document.createElement("div");p.className="empty";p.textContent="呢個月未有紀錄，撳日子或者「＋記一筆」開始 (´,,•ω•,,)";box.append(p);return}
+  if(!rows.length){const p=document.createElement("div");p.className="empty";p.textContent="呢個月未有紀錄，撳月曆日子開始記 (´,,•ω•,,)";box.append(p);return}
   const max=Math.max(...rows.map(c=>tot[c.k]));
   rows.forEach(c=>{const r=document.createElement("div");r.className="cr";
     const l=document.createElement("span");l.textContent=c.e+" "+c.n;
@@ -698,7 +696,6 @@ async function togglePayday(key,on){if(!need())return;
   try{await db.doc("settings/main").set({...settings,paydays:list});toast(on?"已設為出糧日 💰":"已取消出糧日")}catch(e){toast("儲唔到")}}
 $("shClose").onclick=closeSheet;$("scrim").onclick=closeSheet;
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("sheet").hidden)closeSheet()});
-$("fab").onclick=()=>openSheet(todayStr());
 $("eDate").onchange=()=>{if($("eDate").value&&!editId){sel=$("eDate").value;drawSheet()}};
 $("eAmt").addEventListener("keydown",e=>{if(e.key==="Enter")$("eSave").click()});
 
