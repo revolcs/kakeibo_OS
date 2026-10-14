@@ -77,6 +77,8 @@ h2 small{font-size:.78rem;color:var(--soft);font-weight:400}
 .mini.del{border-color:var(--pink);color:var(--pink)}
 .addrow{display:flex;gap:6px;flex-wrap:wrap}
 .tagbox{border-top:2px dashed var(--line);padding-top:12px;margin-top:4px}
+.tagbox .ghbox{border:0;padding:0}
+.tagbox .stats{margin-bottom:10px}
 .tagbox summary{cursor:pointer;display:flex;gap:8px;align-items:center;flex-wrap:wrap;list-style:none}
 .tagbox summary::-webkit-details-marker{display:none}
 .tagbox summary::before{content:"▸";font-weight:900;transition:transform .15s}
@@ -300,12 +302,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   </section>
 
   <section class="card" aria-labelledby="setH">
-    <h2 id="setH">⚙️ 設定</h2>
-    <div class="stats">
-      <label class="stat"><span class="lab">每期儲蓄目標</span><input class="f num" id="sSave" inputmode="decimal" style="width:100%"></label>
-      <label class="stat"><span class="lab">開心錢上限</span><input class="f num" id="sFun" inputmode="decimal" style="width:100%"></label>
-    </div>
-    <button class="btn ghost" id="sGo" type="button">儲存設定</button>
+    <h2 id="setH" class="foldh">⚙️ 設定<button class="foldbtn" type="button" aria-expanded="true" aria-label="收起或者打開設定">▾</button></h2>
     <details class="tagbox" id="tagBox">
       <summary><b>🏷️ 我的 tag</b><span class="hint">改名、換 emoji、加新 tag、收起唔用嘅</span></summary>
       <div class="tagseg"><button class="chip" type="button" data-tk="out" aria-pressed="true">支出</button><button class="chip" type="button" data-tk="in" aria-pressed="false">收入</button></div>
@@ -317,8 +314,17 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       </div>
       <span class="hint">▲▼ 調次序；撳 emoji 揀圖案；改名撳 Enter，或者撳去第二行就會自動儲存。收起咗嘅 tag 唔會喺記數時出現，舊紀錄照保留。有紀錄用緊嘅 tag 唔刪得，可以收起。</span>
     </details>
+    <details class="tagbox" id="goalBox">
+      <summary><b>🎯 理想金額設定</b><span class="hint">每期儲蓄目標、開心錢上限</span></summary>
+      <div class="stats">
+        <label class="stat"><span class="lab">每期儲蓄目標</span><input class="f num" id="sSave" inputmode="decimal" style="width:100%"></label>
+        <label class="stat"><span class="lab">開心錢上限</span><input class="f num" id="sFun" inputmode="decimal" style="width:100%"></label>
+      </div>
+      <button class="btn ghost" id="sGo" type="button" style="width:100%">儲存理想金額</button>
+    </details>
+    <details class="tagbox" id="ghBoxD">
+      <summary><b>☁️ GitHub 同步</b><span class="hint" id="ghSum">手機同電腦共用同一份數</span></summary>
     <div class="ghbox">
-      <b>☁️ GitHub 同步（手機同電腦共用同一份數）</b>
       <span class="hint">要一個<b>私人（Private）</b>倉庫，同一個 Token。詳細步驟睇 README。</span>
       <label>倉庫（用戶名/倉庫名）<input class="f" id="ghRepo" placeholder="例：yourname/kakeibo-data" autocomplete="off"></label>
       <label>檔案路徑<input class="f" id="ghPath" value="kakeibo.json" autocomplete="off"></label>
@@ -331,6 +337,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       </div>
       <span class="hint" id="ghStatus">未設定</span>
     </div>
+    </details>
     <div style="border-top:2px dashed var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px">
       <div class="brow">
         <button class="btn" id="exOff" type="button">📦 匯出備份</button>
@@ -539,10 +546,17 @@ function cycleStats(c){
   const sum=f=>inC.filter(f).reduce((s,e)=>s+e.amt,0);
   return {inc:sum(e=>e.kind==="in"),out:sum(e=>e.kind!=="in"),save:sum(e=>e.cat==="save"),fun:sum(e=>ALL[e.cat]?.fun)};
 }
-/* 上期剩低：有手動填就用手動，冇就由上一期自動推算 */
+/* 某日 23:59 嘅戶口結餘：由最近一次對數（settings.balance）推返去
+   對數之後先記、日期喺嗰日或之前嘅紀錄 → 照加減；對數之前已記、日期喺嗰日之後嘅紀錄 → 扣返出嚟 */
+function balAt(day){const mb=settings.balance;if(!mb||typeof mb.amt!=="number")return null;
+  let v=mb.amt;for(const e of entries){const s=e.kind==="in"?e.amt:-e.amt,after=(e.ts||0)>mb.ts;
+    if(after&&e.date<=day)v+=s;else if(!after&&e.date>day)v-=s}
+  return Math.round(v*100)/100}
+/* 上期剩低：有手動填就用手動；有對過戶口結餘就用「出糧前一日 23:59」嘅結餘；兩樣都冇先由上一期推算 */
 function carryOf(c,depth=0){
   const cd=cycles[c.start];
   if(cd&&typeof cd.carry==="number")return {v:cd.carry,auto:false};
+  if(c.start<=todayStr()&&payDates().includes(c.start)){const b=balAt(addDays(c.start,-1));if(b!==null)return {v:b,auto:true,fromBal:true}}
   const pds=payDates(),i=pds.indexOf(c.start);
   if(i<=0||depth>24)return {v:0,auto:true};
   const pc=cycleOf(pds[i-1]),st=cycleStats(pc),pcarry=carryOf(pc,depth+1).v;
@@ -582,7 +596,7 @@ function renderCycle(){
   {const h=document.createElement("span");h.className="hint";h.textContent="撳月曆日子可以加或者取消出糧日";pr.append(h)}
   $("free").textContent=money(free);$("free").classList.toggle("neg",free<0);
   renderSaved();
-  $("carryLab").textContent=cr.auto?"上期剩低（自動計）":"上期剩低";
+  $("carryLab").textContent=cr.auto?(cr.fromBal?"上期剩低（出糧前一日結餘）":"上期剩低（自動計）"):"上期剩低";
   $("carryBtn").textContent=money(cr.v);
   lastBal=bal;lastInc=st.inc;
   $("incV").textContent=money(st.inc);$("outV").textContent=money(st.out);$("balBtn").textContent=money(bal);
@@ -945,7 +959,9 @@ setInterval(()=>{if(themeMode==="auto")applyThemeMode()},60000);
   document.querySelectorAll(".foldbtn").forEach(b=>{const sec=b.closest("section"),id=sec.getAttribute("aria-labelledby");
     const set=open=>{sec.classList.toggle("folded",!open);b.setAttribute("aria-expanded",open);b.textContent=open?"▾":"▸"};
     set(!folds[id]);
-    b.onclick=()=>{const open=sec.classList.contains("folded");folds[id]=!open;ls.set("kk-fold",JSON.stringify(folds));set(open)}})}
+    b.onclick=()=>{const open=sec.classList.contains("folded");folds[id]=!open;ls.set("kk-fold",JSON.stringify(folds));set(open)}});
+  document.querySelectorAll("details.tagbox[id]").forEach(d=>{const k="open:"+d.id;if(folds[k])d.open=true;
+    d.addEventListener("toggle",()=>{folds[k]=d.open;ls.set("kk-fold",JSON.stringify(folds))})})}
 applyThemeMode();
 function paintHide(){$("hideBtn").textContent=HIDE?"🙈":"🙉";$("hideBtn").setAttribute("aria-label",HIDE?"顯示金額":"隱藏金額");$("hideBtn").setAttribute("aria-pressed",HIDE)}
 $("hideBtn").onclick=()=>{HIDE=!HIDE;try{localStorage.setItem("kk-hide",HIDE?"1":"0")}catch(e){}paintHide();render();drawSheet();toast(HIDE?"金額已隱藏 🙈":"金額顯示中 🙉")};
