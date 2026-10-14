@@ -276,7 +276,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   <section class="card" aria-labelledby="calH">
     <h2 id="calH">📅 <span id="calTitle"></span> <small id="monthSum"></small></h2>
     <div class="cal" id="cal"></div>
-    <div class="legend"><span><b style="color:var(--zero)">0！</b> 零消費</span><span>🐷 有儲錢</span><span>💰 出糧日（淡色 = 預計）</span><span style="color:var(--sun)">紅字 = 公眾假期</span><span style="color:var(--big)">紫色格 = 單日 $2,000+</span><span>虛線格 = 上／下個月</span><span>👆 手機：喺月曆上下撥 = 轉月</span></div>
+    <div class="legend"><span><b style="color:var(--zero)">0！</b> 零消費</span><span>🐷 有儲錢</span><span>💰 出糧日（淡色 = 預計）</span><span style="color:var(--sun)">紅字 = 公眾假期</span><span style="color:var(--big)">紫色格 = 單日 $2,000+</span><span>虛線格 = 上／下個月</span><span>👆 喺月曆上下撥（手機）／滾輪（電腦）= 轉月</span></div>
     <div class="hols" id="hols"></div>
   </section>
 
@@ -930,6 +930,20 @@ function go(y,m){if(m<1){m=12;y--}if(m>12){m=1;y++}view={y,m};ls.set("kk-view",J
     const up=dy<0;go(view.y,view.m+(up?1:-1));
     cal.classList.remove("sl-up","sl-dn");void cal.offsetWidth;cal.classList.add(up?"sl-up":"sl-dn");
   });
+  /* 電腦：滑鼠滾輪／觸控板兩指上下撥。向下滾 = 下個月，向上滾 = 上個月。
+     一次撥動只轉一個月：累積滾動量夠先轉，之後等滾動完全停咗（慣性滾動都計）先接受下一次 */
+  let acc=0,lock=false,quiet=null;
+  cal.addEventListener("wheel",e=>{
+    if(e.ctrlKey||Math.abs(e.deltaY)<Math.abs(e.deltaX))return;
+    e.preventDefault();
+    clearTimeout(quiet);quiet=setTimeout(()=>{lock=false;acc=0},160);
+    if(lock)return;
+    acc+=e.deltaMode===1?e.deltaY*16:e.deltaY;
+    if(Math.abs(acc)<50)return;
+    const up=acc<0;lock=true;acc=0;
+    go(view.y,view.m+(up?-1:1));
+    cal.classList.remove("sl-up","sl-dn");void cal.offsetWidth;cal.classList.add(up?"sl-dn":"sl-up");
+  },{passive:false});
 }
 $("prev").onclick=()=>go(view.y,view.m-1);$("next").onclick=()=>go(view.y,view.m+1);
 $("yIn").onchange=()=>{const y=parseInt($("yIn").value);if(y>=2000&&y<=2100)go(y,view.m);else $("yIn").value=view.y};
