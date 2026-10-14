@@ -91,6 +91,17 @@ h2 small{font-size:.78rem;color:var(--soft);font-weight:400}
 .tagrow .mini{flex:0 0 auto}
 .tagrow.off .tem,.tagrow.off .tn{opacity:.45}
 .tagrow .tlock{font-size:.72rem;opacity:.6;flex:0 0 auto}
+.tmv{display:flex;flex-direction:column;gap:2px;flex:0 0 auto}
+.tmb{font:inherit;font-size:.55rem;width:26px;height:19px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink);padding:0;line-height:1;cursor:pointer}
+.tmb:disabled{opacity:.25;cursor:default}
+.tembtn{cursor:pointer;font-size:1.1rem;line-height:1;color:inherit}
+.emopop{position:absolute;z-index:60;background:var(--sheet);color:var(--ink);border:2px solid var(--ink);border-radius:14px;box-shadow:4px 4px 0 var(--shadow);padding:10px;width:min(300px,calc(100vw - 24px));display:flex;flex-direction:column;gap:8px}
+.emogrid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px}
+.emogrid button{font-size:1.25rem;line-height:1;padding:6px 0;border:0;background:none;border-radius:8px;cursor:pointer}
+.emogrid button:hover,.emogrid button:focus-visible{background:var(--tile)}
+h2.foldh{position:relative;padding-right:40px}
+.foldbtn{position:absolute;right:0;top:-3px;font:inherit;font-size:.85rem;width:30px;height:30px;border-radius:50%;border:2px solid var(--ink);background:var(--sheet);color:var(--ink);cursor:pointer;line-height:1;padding:0}
+section.folded>:not(h2){display:none}
 .addrow input{flex:1;min-width:0}
 input.f,select.f{font:inherit;border:2px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);padding:7px 10px;min-width:0}
 input.f:focus{border-color:var(--ink);outline:none}
@@ -268,7 +279,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   </section>
 
   <section class="card" aria-labelledby="fxH">
-    <h2 id="fxH">📌 固定支出 <small>🔒 鎖住就唔會改錯，撳 🔓 隨時改數</small></h2>
+    <h2 id="fxH" class="foldh">📌 固定支出 <small>🔒 鎖住就唔會改錯，撳 🔓 隨時改數；▲▼ 調次序</small><button class="foldbtn" type="button" aria-expanded="true" aria-label="收起或者打開固定支出">▾</button></h2>
     <div id="fxList"></div>
     <div class="addrow">
       <input class="f" id="fxName" placeholder="名稱，例：月票" aria-label="固定支出名稱">
@@ -279,12 +290,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   </section>
 
   <section class="card" aria-labelledby="dlH">
-    <h2 id="dlH">🧾 本月明細 <small>撳任何一筆就可以改金額、日期、類別</small></h2>
+    <h2 id="dlH" class="foldh">🧾 本月明細 <small>撳任何一筆就可以改金額、日期、類別</small><button class="foldbtn" type="button" aria-expanded="true" aria-label="收起或者打開本月明細">▾</button></h2>
     <div class="dl" id="dl"></div>
   </section>
 
   <section class="card" aria-labelledby="catH">
-    <h2 id="catH">🍰 本月錢去咗邊</h2>
+    <h2 id="catH" class="foldh">🍰 本月錢去咗邊<button class="foldbtn" type="button" aria-expanded="true" aria-label="收起或者打開本月錢去咗邊">▾</button></h2>
     <div class="cats" id="cats"></div>
   </section>
 
@@ -300,11 +311,11 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       <div class="tagseg"><button class="chip" type="button" data-tk="out" aria-pressed="true">支出</button><button class="chip" type="button" data-tk="in" aria-pressed="false">收入</button></div>
       <div id="tagList"></div>
       <div class="addrow">
-        <input class="f tem" id="tNewE" placeholder="🍰" aria-label="新 tag 嘅 emoji">
+        <button class="f tem tembtn" id="tNewE" type="button" aria-label="揀新 tag 嘅 emoji" data-v="">🏷️</button>
         <input class="f" id="tNewN" placeholder="新 tag 名，例：甜品" aria-label="新 tag 名稱" style="flex:1;min-width:8em">
         <button class="mini acc" id="tAdd" type="button">＋加</button>
       </div>
-      <span class="hint">改完撳 Enter，或者撳去第二行就會自動儲存。收起咗嘅 tag 唔會喺記數時出現，但舊紀錄照樣保留同計數。</span>
+      <span class="hint">▲▼ 調次序；撳 emoji 揀圖案；改名撳 Enter，或者撳去第二行就會自動儲存。收起咗嘅 tag 唔會喺記數時出現，舊紀錄照保留。有紀錄用緊嘅 tag 唔刪得，可以收起。</span>
     </details>
     <div class="ghbox">
       <b>☁️ GitHub 同步（手機同電腦共用同一份數）</b>
@@ -379,17 +390,25 @@ const BASE_IN=[{k:"pay",n:"人工",e:"💰",c:"#14a364"},{k:"inother",n:"其他�
    CATS / INCATS = 記數時揀得嘅（唔包收起咗嘅）；CATS_ALL = 全部支出 tag（統計用）；ALL = 全部（顯示舊紀錄用） */
 const CATS=[],INCATS=[],CATS_ALL=[],ALL={};
 const TAG_COLORS=["#ff9f6b","#6bd3ff","#c08bff","#ffd36b","#6bffb0","#ff6bb5","#8b9cff","#b5e36b"];
-const TAG_LOCK=new Set(["other","pay"]);
+const TAG_LOCK=new Set(["pay"]);
 let tagKind="out";
-function tagsCfg(){const t=settings.tags||{};return {over:{...(t.over||{})},hide:[...(t.hide||[])],custom:Array.isArray(t.custom)?t.custom.map(c=>({...c})):[]}}
+function tagsCfg(){const t=settings.tags||{};return {over:{...(t.over||{})},hide:[...(t.hide||[])],del:[...(t.del||[])],order:[...(t.order||[])],custom:Array.isArray(t.custom)?t.custom.map(c=>({...c})):[]}}
+/* 按自訂次序排；未排過嘅跟返預設次序放後面 */
+function sortTags(list,order){const pos=new Map(order.map((k,i)=>[k,i]));return list.map((c,i)=>[c,pos.has(c.k)?pos.get(c.k):1e6+i]).sort((a,b)=>a[1]-b[1]).map(x=>x[0])}
+function tagLists(t){
+  const mk=c=>({...c,...(t.over[c.k]||{})}),del=new Set(t.del);
+  const out=sortTags([...BASE_CATS.map(c=>({...mk(c),custom:false,changed:!!t.over[c.k]})),...t.custom.filter(c=>(c.kind||"out")!=="in").map(c=>({...c,custom:true}))].filter(c=>!del.has(c.k)),t.order);
+  const inn=sortTags([...BASE_IN.map(c=>({...mk(c),custom:false,changed:!!t.over[c.k]})),...t.custom.filter(c=>c.kind==="in").map(c=>({...c,custom:true}))].filter(c=>!del.has(c.k)),t.order);
+  return {out,inn,mk};
+}
 function applyTags(force){
-  const t=tagsCfg(),hide=new Set(t.hide),mk=c=>({...c,...(t.over[c.k]||{})});
-  const outAll=[...BASE_CATS.map(mk),...t.custom.filter(c=>(c.kind||"out")!=="in").map(mk)];
-  const inAll=[...BASE_IN.map(mk),...t.custom.filter(c=>c.kind==="in").map(mk)];
-  for(const k in ALL)delete ALL[k];[...outAll,...inAll].forEach(c=>ALL[c.k]=c);
-  CATS_ALL.length=0;CATS_ALL.push(...outAll);
-  CATS.length=0;CATS.push(...outAll.filter(c=>!hide.has(c.k)||TAG_LOCK.has(c.k)));
-  INCATS.length=0;INCATS.push(...inAll.filter(c=>!hide.has(c.k)||TAG_LOCK.has(c.k)));
+  const t=tagsCfg(),hide=new Set(t.hide),{out,inn,mk}=tagLists(t);
+  for(const k in ALL)delete ALL[k];
+  /* ALL 連刪咗嘅內置 tag 都保留，萬一有舊紀錄照樣顯示到 */
+  [...BASE_CATS,...BASE_IN].forEach(c=>ALL[c.k]=mk(c));[...out,...inn].forEach(c=>ALL[c.k]=c);
+  CATS_ALL.length=0;CATS_ALL.push(...out);
+  CATS.length=0;CATS.push(...out.filter(c=>!hide.has(c.k)||TAG_LOCK.has(c.k)));
+  INCATS.length=0;INCATS.push(...inn.filter(c=>!hide.has(c.k)||TAG_LOCK.has(c.k)));
   const fx=$("fxCat");if(fx){const v=fx.value;fx.replaceChildren();
     CATS.forEach(c=>{const o=document.createElement("option");o.value=c.k;o.textContent=c.e+" "+c.n;fx.append(o)});
     if(v&&CATS.some(c=>c.k===v))fx.value=v}
@@ -397,35 +416,75 @@ function applyTags(force){
 }
 async function setTags(t,force){if(!need())return false;settings={...settings,tags:t};applyTags(force);if(sel)drawChips();
   try{await db.doc("settings/main").set({...settings,tags:t});return true}catch(e){toast("儲唔到");return false}}
+const tagUsed=k=>entries.some(x=>x.cat===k)||presets().some(p=>p.cat===k)||Object.values(cycles).some(cy=>(cy.pending||[]).some(p=>p.cat===k));
+function hasVisible(T,kind){const L=tagLists(T),hide=new Set(T.hide);return (kind==="in"?L.inn:L.out).some(c=>!hide.has(c.k)||TAG_LOCK.has(c.k))}
+function moveTag(k,d){const T=tagsCfg(),L=tagLists(T),cur=(tagKind==="in"?L.inn:L.out).map(c=>c.k),i=cur.indexOf(k),j=i+d;
+  if(i<0||j<0||j>=cur.length)return;[cur[i],cur[j]]=[cur[j],cur[i]];const oth=(tagKind==="in"?L.out:L.inn).map(c=>c.k);
+  T.order=tagKind==="in"?[...oth,...cur]:[...cur,...oth];setTags(T,true)}
+
+/* Emoji 選擇盒：電腦同手機都用得 */
+const EMOJI_SET="🍙 🍜 🍱 🍣 🍔 🍰 🧋 ☕ 🍺 🛒 🚃 🚌 🚕 ✈️ ⛽ 🎫 🧧 💳 🏦 💰 🐷 📱 💻 💡 🏠 🧹 🧺 👗 👟 💄 💊 🏥 🎮 🎲 🃏 🧸 🎁 🎬 🎤 🎨 📚 ✏️ 💌 🐶 🐱 🌸 ✨ 🏷️".split(" ");
+function closeEmoji(){const p=$("emoPop");if(p)p.remove();document.removeEventListener("pointerdown",emoOutside,true);document.removeEventListener("keydown",emoEsc,true)}
+function emoOutside(ev){const p=$("emoPop");if(p&&!p.contains(ev.target)&&!ev.target.closest?.(".tembtn"))closeEmoji()}
+function emoEsc(ev){if(ev.key==="Escape")closeEmoji()}
+function emojiPick(anchor,onPick){
+  const was=$("emoPop");closeEmoji();if(was&&was.dataset.for===anchor.dataset.emoId)return;
+  anchor.dataset.emoId=anchor.dataset.emoId||Math.random().toString(36).slice(2);
+  const pop=document.createElement("div");pop.className="emopop";pop.id="emoPop";pop.dataset.for=anchor.dataset.emoId;
+  pop.setAttribute("role","dialog");pop.setAttribute("aria-label","揀 emoji");
+  const g=document.createElement("div");g.className="emogrid";
+  EMOJI_SET.forEach(e=>{const b=document.createElement("button");b.type="button";b.textContent=e;b.setAttribute("aria-label",e);b.onclick=()=>{closeEmoji();onPick(e)};g.append(b)});
+  const row=document.createElement("div");row.className="addrow";
+  const inp=document.createElement("input");inp.className="f";inp.placeholder="自己打或者貼上";inp.setAttribute("aria-label","自己輸入 emoji");inp.style.flex="1";inp.style.minWidth="0";
+  const ok=document.createElement("button");ok.type="button";ok.className="mini acc";ok.textContent="用呢個";
+  ok.onclick=()=>{const v=inp.value.trim();if(!v){toast("打個 emoji 先");return}closeEmoji();onPick(v)};inp.onkeydown=e=>{if(e.key==="Enter")ok.click()};
+  row.append(inp,ok);pop.append(g,row);document.body.append(pop);
+  const r=anchor.getBoundingClientRect(),w=pop.offsetWidth,h=pop.offsetHeight;
+  let left=Math.min(Math.max(12,r.left),innerWidth-w-12),top=r.bottom+6;if(top+h>innerHeight-8&&r.top-h-6>8)top=r.top-h-6;
+  pop.style.left=(left+scrollX)+"px";pop.style.top=(top+scrollY)+"px";
+  setTimeout(()=>{document.addEventListener("pointerdown",emoOutside,true);document.addEventListener("keydown",emoEsc,true)},0);
+  (g.querySelector("button")||inp).focus({preventScroll:true});
+}
+
 function renderTags(force){
   const box=$("tagList");if(!box)return;
   /* 喺列表入面改緊嘢時唔好重畫，離開列表先畫；撳按鈕（force）就即刻畫 */
   if(!force&&box.dataset.busy){box.dataset.dirty=1;return}delete box.dataset.dirty;box.replaceChildren();
   document.querySelectorAll("[data-tk]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tk===tagKind));
-  const t=tagsCfg(),hide=new Set(t.hide),base=tagKind==="in"?BASE_IN:BASE_CATS;
-  const list=[...base.map(c=>({...c,...(t.over[c.k]||{}),custom:false,changed:!!t.over[c.k]})),
-              ...t.custom.filter(c=>(c.kind||"out")===tagKind).map(c=>({...c,custom:true}))];
-  list.forEach(c=>{
+  const t=tagsCfg(),hide=new Set(t.hide),L=tagLists(t),list=tagKind==="in"?L.inn:L.out;
+  list.forEach((c,i)=>{
     const off=hide.has(c.k)&&!TAG_LOCK.has(c.k),r=document.createElement("div");r.className="tagrow"+(off?" off":"");
-    const e=document.createElement("input");e.className="f tem";e.value=c.e;e.setAttribute("aria-label",c.n+" 嘅 emoji");
+    const mv=document.createElement("div");mv.className="tmv";
+    [["▲",-1,i===0,"上移"],["▼",1,i===list.length-1,"下移"]].forEach(([tx,d,dis,lb])=>{const b=document.createElement("button");b.type="button";b.className="tmb";b.textContent=tx;b.disabled=dis;b.setAttribute("aria-label",`${c.n} ${lb}`);b.onclick=()=>moveTag(c.k,d);mv.append(b)});
+    const eb=document.createElement("button");eb.type="button";eb.className="f tem tembtn";eb.textContent=c.e;eb.setAttribute("aria-label",`${c.n} 嘅 emoji，撳嚟揀`);
     const n=document.createElement("input");n.className="f tn";n.value=c.n;n.setAttribute("aria-label","tag 名稱");
-    const commit=()=>{const ne=e.value.trim()||c.e,nn=n.value.trim()||c.n;if(ne===c.e&&nn===c.n)return;const T=tagsCfg();
+    const commit=pick=>{const ne=(pick||eb.textContent).trim()||c.e,nn=n.value.trim()||c.n;if(ne===c.e&&nn===c.n)return;const T=tagsCfg();
       if(c.custom)T.custom=T.custom.map(x=>x.k===c.k?{...x,e:ne,n:nn}:x);else T.over[c.k]={e:ne,n:nn};
-      setTags(T).then(ok=>{if(ok)toast(`已改做 ${ne} ${nn} 🏷️`)})};
-    [e,n].forEach(i=>{i.onkeydown=ev=>{if(ev.key==="Enter")i.blur()}});
+      setTags(T,!!pick).then(ok=>{if(ok)toast(`已改做 ${ne} ${nn} 🏷️`)})};
+    eb.onclick=()=>emojiPick(eb,e=>{eb.textContent=e;commit(e)});
+    n.onkeydown=ev=>{if(ev.key==="Enter")n.blur()};
     r.addEventListener("focusout",ev=>{if(!r.contains(ev.relatedTarget))commit()});
-    r.append(e,n);
+    r.append(mv,eb,n);
     if(TAG_LOCK.has(c.k)){const s=document.createElement("span");s.className="tlock";s.textContent="🔒 常駐";r.append(s)}
-    else{const h=document.createElement("button");h.type="button";h.className="mini";h.textContent=off?"顯示":"收起";
-      h.onclick=()=>{const T=tagsCfg();T.hide=off?T.hide.filter(k=>k!==c.k):[...T.hide,c.k];setTags(T,true).then(ok=>{if(ok)toast(off?`${c.n} 返嚟喇`:`${c.n} 收起咗（舊紀錄照保留）`)})};r.append(h)}
-    if(!c.custom&&c.changed){const b=document.createElement("button");b.type="button";b.className="mini";b.textContent="還原";
-      b.onclick=()=>{const T=tagsCfg();delete T.over[c.k];setTags(T,true).then(ok=>{if(ok)toast("還原咗")})};r.append(b)}
-    if(c.custom){const d=document.createElement("button");d.type="button";d.className="mini del";d.textContent="刪";
-      d.onclick=()=>{const used=entries.some(x=>x.cat===c.k)||presets().some(p=>p.cat===c.k)||Object.values(cycles).some(cy=>(cy.pending||[]).some(p=>p.cat===c.k));
-        if(used){toast("有紀錄用緊呢個 tag，可以撳「收起」");return}
+    else{
+      const h=document.createElement("button");h.type="button";h.className="mini";h.textContent=off?"顯示":"收起";
+      h.onclick=()=>{const T=tagsCfg();T.hide=off?T.hide.filter(k=>k!==c.k):[...T.hide,c.k];
+        if(!off&&!hasVisible(T,tagKind)){toast("最少要留一個 tag 俾你揀");return}
+        setTags(T,true).then(ok=>{if(ok)toast(off?`${c.n} 返嚟喇`:`${c.n} 收起咗（舊紀錄照保留）`)})};r.append(h);
+      if(!c.custom&&c.changed){const b=document.createElement("button");b.type="button";b.className="mini";b.textContent="還原";
+        b.onclick=()=>{const T=tagsCfg();delete T.over[c.k];setTags(T,true).then(ok=>{if(ok)toast("還原咗")})};r.append(b)}
+      const d=document.createElement("button");d.type="button";d.className="mini del";d.textContent="刪";
+      d.onclick=()=>{if(tagUsed(c.k)){toast("有紀錄用緊呢個 tag，可以撳「收起」");return}
+        const T=tagsCfg();if(c.custom)T.custom=T.custom.filter(x=>x.k!==c.k);else T.del=[...new Set([...T.del,c.k])];T.hide=T.hide.filter(k=>k!==c.k);
+        if(!hasVisible(T,tagKind)){toast("最少要留一個 tag 俾你揀");return}
         if(!d.dataset.arm){d.dataset.arm=1;d.textContent="確定？";setTimeout(()=>{if(d.isConnected){delete d.dataset.arm;d.textContent="刪"}},2500);return}
-        const T=tagsCfg();T.custom=T.custom.filter(x=>x.k!==c.k);T.hide=T.hide.filter(k=>k!==c.k);setTags(T,true).then(ok=>{if(ok)toast("刪咗")})};r.append(d)}
+        setTags(T,true).then(ok=>{if(ok)toast(`刪咗 ${c.n}`)})};r.append(d);
+    }
     box.append(r)});
+  const dk=t.del.filter(k=>(tagKind==="in"?BASE_IN:BASE_CATS).some(c=>c.k===k));
+  if(dk.length){const b=document.createElement("button");b.type="button";b.className="mini";b.style.alignSelf="flex-start";
+    b.textContent=`↺ 還原已刪除嘅內置 tag（${dk.length} 個）`;
+    b.onclick=()=>{const T=tagsCfg();T.del=T.del.filter(k=>!dk.includes(k));setTags(T,true).then(ok=>{if(ok)toast("還原咗")})};box.append(b)}
 }
 /* 香港公眾假期（政府憲報公佈，2026 全年至 2027 年 7 月） */
 const HOL={
@@ -499,7 +558,7 @@ function renderCycle(){
     bal=mb.amt+after.filter(e=>e.kind==="in").reduce((s,e)=>s+e.amt,0)-after.filter(e=>e.kind!=="in").reduce((s,e)=>s+e.amt,0)}
   const pend=cd.pending||[],pendSum=pend.reduce((s,p)=>s+p.amt,0),free=bal-pendSum;
   const [,sm,sd]=c.start.split("-"),[,em,ed]=c.end.split("-");
-  $("cycRange").textContent=`${+sm}/${+sd} – ${+em}/${+ed}`;
+  $("cycRange").textContent=`${+sm}/${+sd}（${payDates().includes(c.start)?"上次出糧":"月初"}）– ${+em}/${+ed}（下次出糧前一日${c.nextKnown?"":"・估計"}）`;
   const [ny,nm,nd]=c.next.split("-").map(Number),left=Math.round((new Date(ny,nm-1,nd)-new Date(t.split("-")[0],t.split("-")[1]-1,t.split("-")[2]))/864e5);
   {const dl=$("daysLeft");dl.replaceChildren();if(left>0){dl.append(`距離出糧 ${left} 日\n平均每日`);const b=document.createElement("b");b.textContent=money(Math.max(0,free)/left);dl.append(b)}}
   $("daysLeft").style.whiteSpace="pre-line";
@@ -657,6 +716,7 @@ function fxRow(p,o){
     r.append(ic,ed,a);
   }
   const acts=document.createElement("div");acts.className="acts";
+  if(o.move)[["▲",-1,o.first,"上移"],["▼",1,o.last,"下移"]].forEach(([t,d,dis,l])=>{const b=document.createElement("button");b.type="button";b.className="mini";b.textContent=t;b.disabled=dis;b.setAttribute("aria-label",`${p.name} ${l}`);b.onclick=()=>o.move(d);acts.append(b)});
   (o.acts||[]).forEach(([t,fn])=>{const b=document.createElement("button");b.type="button";b.className="mini acc";b.textContent=t;b.onclick=fn;acts.append(b)});
   if(!p.locked&&o.del){const d=document.createElement("button");d.type="button";d.className="mini del";d.textContent="刪";
     d.onclick=()=>{if(d.dataset.arm)o.del();else{d.dataset.arm=1;d.textContent="確定？";setTimeout(()=>{if(d.isConnected){delete d.dataset.arm;d.textContent="刪"}},2500)}};acts.append(d)}
@@ -671,6 +731,7 @@ function renderFixed(){
   ps.forEach((p,i)=>box.append(fxRow(p,{
     save:patch=>setPresets(ps.map((q,j)=>j===i?{...q,...patch}:q)),
     del:()=>setPresets(ps.filter((_,j)=>j!==i)),
+    move:d=>{const j=i+d;if(j<0||j>=ps.length)return;const a=[...ps];[a[i],a[j]]=[a[j],a[i]];setPresets(a)},first:i===0,last:i===ps.length-1,
     acts:[["＋記一筆",()=>{openSheet(todayStr());fillFrom(p)}],
           ["＋待扣",()=>{const c=cycleOf(todayStr());setPending([...(cycles[c.start]?.pending||[]),{name:p.name,amt:p.amt,cat:p.cat,locked:!!p.locked}]).then(()=>toast(`${p.name} 加咗入待扣`))}]]
   })));
@@ -829,10 +890,11 @@ $("sGo").onclick=async()=>{if(!need())return;
 applyTags();
 {const b=$("tagList");b.addEventListener("focusin",()=>{b.dataset.busy=1});b.addEventListener("focusout",ev=>{if(b.contains(ev.relatedTarget))return;delete b.dataset.busy;if(b.dataset.dirty)renderTags()})}
 document.querySelectorAll("[data-tk]").forEach(b=>b.onclick=()=>{tagKind=b.dataset.tk;renderTags()});
-$("tAdd").onclick=()=>{const nn=$("tNewN").value.trim(),ne=$("tNewE").value.trim()||"🏷️";if(!nn){toast("要填 tag 名");return}
+$("tAdd").onclick=()=>{const nn=$("tNewN").value.trim(),ne=$("tNewE").dataset.v||"🏷️";if(!nn){toast("要填 tag 名");return}
   const T=tagsCfg();if([...BASE_CATS,...BASE_IN,...T.custom].some(c=>(T.over[c.k]?.n||c.n)===nn)){toast("已經有同名嘅 tag");return}
   T.custom.push({k:"t"+Date.now().toString(36),n:nn,e:ne,c:TAG_COLORS[T.custom.length%TAG_COLORS.length],kind:tagKind});
-  setTags(T,true).then(ok=>{if(ok){toast(`加咗 ${ne} ${nn} 🏷️`);$("tNewN").value="";$("tNewE").value=""}})};
+  setTags(T,true).then(ok=>{if(ok){toast(`加咗 ${ne} ${nn} 🏷️`);$("tNewN").value="";$("tNewE").dataset.v="";$("tNewE").textContent="🏷️"}})};
+$("tNewE").onclick=()=>emojiPick($("tNewE"),e=>{$("tNewE").dataset.v=e;$("tNewE").textContent=e});
 $("tNewN").onkeydown=e=>{if(e.key==="Enter")$("tAdd").click()};
 $("fxName").oninput=()=>{$("fxCat").value=guessCat($("fxName").value)};
 $("fxAdd").onclick=()=>{const n=$("fxName").value.trim(),a=Math.round(parseFloat($("fxAmt").value)*100)/100;
@@ -878,6 +940,12 @@ $("themeBtn").onclick=()=>{
   applyThemeMode();toast(TH_LABEL[themeMode]+" "+TH_ICON[themeMode]);
 };
 setInterval(()=>{if(themeMode==="auto")applyThemeMode()},60000);
+/* 區塊摺疊：▾ 打開 / ▸ 收起，記住每部機嘅狀態 */
+{let folds={};try{folds=JSON.parse(ls.get("kk-fold")||"{}")||{}}catch(e){}
+  document.querySelectorAll(".foldbtn").forEach(b=>{const sec=b.closest("section"),id=sec.getAttribute("aria-labelledby");
+    const set=open=>{sec.classList.toggle("folded",!open);b.setAttribute("aria-expanded",open);b.textContent=open?"▾":"▸"};
+    set(!folds[id]);
+    b.onclick=()=>{const open=sec.classList.contains("folded");folds[id]=!open;ls.set("kk-fold",JSON.stringify(folds));set(open)}})}
 applyThemeMode();
 function paintHide(){$("hideBtn").textContent=HIDE?"🙈":"🙉";$("hideBtn").setAttribute("aria-label",HIDE?"顯示金額":"隱藏金額");$("hideBtn").setAttribute("aria-pressed",HIDE)}
 $("hideBtn").onclick=()=>{HIDE=!HIDE;try{localStorage.setItem("kk-hide",HIDE?"1":"0")}catch(e){}paintHide();render();drawSheet();toast(HIDE?"金額已隱藏 🙈":"金額顯示中 🙉")};
