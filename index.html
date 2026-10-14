@@ -76,6 +76,21 @@ h2 small{font-size:.78rem;color:var(--soft);font-weight:400}
 .mini.acc{background:var(--neon);color:var(--neon-ink)}
 .mini.del{border-color:var(--pink);color:var(--pink)}
 .addrow{display:flex;gap:6px;flex-wrap:wrap}
+.tagbox{border-top:2px dashed var(--line);padding-top:12px;margin-top:4px}
+.tagbox summary{cursor:pointer;display:flex;gap:8px;align-items:center;flex-wrap:wrap;list-style:none}
+.tagbox summary::-webkit-details-marker{display:none}
+.tagbox summary::before{content:"▸";font-weight:900;transition:transform .15s}
+.tagbox[open] summary::before{transform:rotate(90deg)}
+.tagbox[open] summary{margin-bottom:10px}
+.tagseg{display:flex;gap:6px;margin-bottom:8px}
+#tagList{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.tagrow{display:flex;gap:6px;align-items:center}
+.tagrow .f{min-width:0}
+.tem{width:3.2em;flex:0 0 3.2em;text-align:center;padding-left:4px!important;padding-right:4px!important}
+.tagrow .tn{flex:1 1 auto}
+.tagrow .mini{flex:0 0 auto}
+.tagrow.off .tem,.tagrow.off .tn{opacity:.45}
+.tagrow .tlock{font-size:.72rem;opacity:.6;flex:0 0 auto}
 .addrow input{flex:1;min-width:0}
 input.f,select.f{font:inherit;border:2px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);padding:7px 10px;min-width:0}
 input.f:focus{border-color:var(--ink);outline:none}
@@ -280,6 +295,17 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       <label class="stat"><span class="lab">開心錢上限</span><input class="f num" id="sFun" inputmode="decimal" style="width:100%"></label>
     </div>
     <button class="btn ghost" id="sGo" type="button">儲存設定</button>
+    <details class="tagbox" id="tagBox">
+      <summary><b>🏷️ 我的 tag</b><span class="hint">改名、換 emoji、加新 tag、收起唔用嘅</span></summary>
+      <div class="tagseg"><button class="chip" type="button" data-tk="out" aria-pressed="true">支出</button><button class="chip" type="button" data-tk="in" aria-pressed="false">收入</button></div>
+      <div id="tagList"></div>
+      <div class="addrow">
+        <input class="f tem" id="tNewE" placeholder="🍰" aria-label="新 tag 嘅 emoji">
+        <input class="f" id="tNewN" placeholder="新 tag 名，例：甜品" aria-label="新 tag 名稱" style="flex:1;min-width:8em">
+        <button class="mini acc" id="tAdd" type="button">＋加</button>
+      </div>
+      <span class="hint">改完撳 Enter，或者撳去第二行就會自動儲存。收起咗嘅 tag 唔會喺記數時出現，但舊紀錄照樣保留同計數。</span>
+    </details>
     <div class="ghbox">
       <b>☁️ GitHub 同步（手機同電腦共用同一份數）</b>
       <span class="hint">要一個<b>私人（Private）</b>倉庫，同一個 Token。詳細步驟睇 README。</span>
@@ -335,7 +361,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 </div>
 
 <script id="kkMain">
-const CATS=[
+const BASE_CATS=[
  {k:"food",n:"食飯",e:"🍙",c:"#ffb547"},
  {k:"octo",n:"八達通/交通",e:"🚃",c:"#2fb8ff"},
  {k:"cn",n:"大陸過數",e:"🧧",c:"#ff6b6b"},
@@ -348,8 +374,59 @@ const CATS=[
  {k:"save",n:"儲蓄",e:"🐷",c:"#ffcf4a"},
  {k:"other",n:"其他",e:"✨",c:"#b0b0a8"}
 ];
-const INCATS=[{k:"pay",n:"人工",e:"💰",c:"#14a364"},{k:"inother",n:"其他收入",e:"🌸",c:"#4fe39a"}];
-const ALL=Object.fromEntries([...CATS,...INCATS].map(c=>[c.k,c]));
+const BASE_IN=[{k:"pay",n:"人工",e:"💰",c:"#14a364"},{k:"inother",n:"其他收入",e:"🌸",c:"#4fe39a"}];
+/* 自訂 tag：settings.tags = {over:{key:{n,e}}, hide:[key], custom:[{k,n,e,c,kind}]}
+   CATS / INCATS = 記數時揀得嘅（唔包收起咗嘅）；CATS_ALL = 全部支出 tag（統計用）；ALL = 全部（顯示舊紀錄用） */
+const CATS=[],INCATS=[],CATS_ALL=[],ALL={};
+const TAG_COLORS=["#ff9f6b","#6bd3ff","#c08bff","#ffd36b","#6bffb0","#ff6bb5","#8b9cff","#b5e36b"];
+const TAG_LOCK=new Set(["other","pay"]);
+let tagKind="out";
+function tagsCfg(){const t=settings.tags||{};return {over:{...(t.over||{})},hide:[...(t.hide||[])],custom:Array.isArray(t.custom)?t.custom.map(c=>({...c})):[]}}
+function applyTags(force){
+  const t=tagsCfg(),hide=new Set(t.hide),mk=c=>({...c,...(t.over[c.k]||{})});
+  const outAll=[...BASE_CATS.map(mk),...t.custom.filter(c=>(c.kind||"out")!=="in").map(mk)];
+  const inAll=[...BASE_IN.map(mk),...t.custom.filter(c=>c.kind==="in").map(mk)];
+  for(const k in ALL)delete ALL[k];[...outAll,...inAll].forEach(c=>ALL[c.k]=c);
+  CATS_ALL.length=0;CATS_ALL.push(...outAll);
+  CATS.length=0;CATS.push(...outAll.filter(c=>!hide.has(c.k)||TAG_LOCK.has(c.k)));
+  INCATS.length=0;INCATS.push(...inAll.filter(c=>!hide.has(c.k)||TAG_LOCK.has(c.k)));
+  const fx=$("fxCat");if(fx){const v=fx.value;fx.replaceChildren();
+    CATS.forEach(c=>{const o=document.createElement("option");o.value=c.k;o.textContent=c.e+" "+c.n;fx.append(o)});
+    if(v&&CATS.some(c=>c.k===v))fx.value=v}
+  renderTags(force);
+}
+async function setTags(t,force){if(!need())return false;settings={...settings,tags:t};applyTags(force);if(sel)drawChips();
+  try{await db.doc("settings/main").set({...settings,tags:t});return true}catch(e){toast("儲唔到");return false}}
+function renderTags(force){
+  const box=$("tagList");if(!box)return;
+  /* 喺列表入面改緊嘢時唔好重畫，離開列表先畫；撳按鈕（force）就即刻畫 */
+  if(!force&&box.dataset.busy){box.dataset.dirty=1;return}delete box.dataset.dirty;box.replaceChildren();
+  document.querySelectorAll("[data-tk]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tk===tagKind));
+  const t=tagsCfg(),hide=new Set(t.hide),base=tagKind==="in"?BASE_IN:BASE_CATS;
+  const list=[...base.map(c=>({...c,...(t.over[c.k]||{}),custom:false,changed:!!t.over[c.k]})),
+              ...t.custom.filter(c=>(c.kind||"out")===tagKind).map(c=>({...c,custom:true}))];
+  list.forEach(c=>{
+    const off=hide.has(c.k)&&!TAG_LOCK.has(c.k),r=document.createElement("div");r.className="tagrow"+(off?" off":"");
+    const e=document.createElement("input");e.className="f tem";e.value=c.e;e.setAttribute("aria-label",c.n+" 嘅 emoji");
+    const n=document.createElement("input");n.className="f tn";n.value=c.n;n.setAttribute("aria-label","tag 名稱");
+    const commit=()=>{const ne=e.value.trim()||c.e,nn=n.value.trim()||c.n;if(ne===c.e&&nn===c.n)return;const T=tagsCfg();
+      if(c.custom)T.custom=T.custom.map(x=>x.k===c.k?{...x,e:ne,n:nn}:x);else T.over[c.k]={e:ne,n:nn};
+      setTags(T).then(ok=>{if(ok)toast(`已改做 ${ne} ${nn} 🏷️`)})};
+    [e,n].forEach(i=>{i.onkeydown=ev=>{if(ev.key==="Enter")i.blur()}});
+    r.addEventListener("focusout",ev=>{if(!r.contains(ev.relatedTarget))commit()});
+    r.append(e,n);
+    if(TAG_LOCK.has(c.k)){const s=document.createElement("span");s.className="tlock";s.textContent="🔒 常駐";r.append(s)}
+    else{const h=document.createElement("button");h.type="button";h.className="mini";h.textContent=off?"顯示":"收起";
+      h.onclick=()=>{const T=tagsCfg();T.hide=off?T.hide.filter(k=>k!==c.k):[...T.hide,c.k];setTags(T,true).then(ok=>{if(ok)toast(off?`${c.n} 返嚟喇`:`${c.n} 收起咗（舊紀錄照保留）`)})};r.append(h)}
+    if(!c.custom&&c.changed){const b=document.createElement("button");b.type="button";b.className="mini";b.textContent="還原";
+      b.onclick=()=>{const T=tagsCfg();delete T.over[c.k];setTags(T,true).then(ok=>{if(ok)toast("還原咗")})};r.append(b)}
+    if(c.custom){const d=document.createElement("button");d.type="button";d.className="mini del";d.textContent="刪";
+      d.onclick=()=>{const used=entries.some(x=>x.cat===c.k)||presets().some(p=>p.cat===c.k)||Object.values(cycles).some(cy=>(cy.pending||[]).some(p=>p.cat===c.k));
+        if(used){toast("有紀錄用緊呢個 tag，可以撳「收起」");return}
+        if(!d.dataset.arm){d.dataset.arm=1;d.textContent="確定？";setTimeout(()=>{if(d.isConnected){delete d.dataset.arm;d.textContent="刪"}},2500);return}
+        const T=tagsCfg();T.custom=T.custom.filter(x=>x.k!==c.k);T.hide=T.hide.filter(k=>k!==c.k);setTags(T,true).then(ok=>{if(ok)toast("刪咗")})};r.append(d)}
+    box.append(r)});
+}
 /* 香港公眾假期（政府憲報公佈，2026 全年至 2027 年 7 月） */
 const HOL={
 "2026-01-01":"一月一日","2026-02-17":"農曆年初一","2026-02-18":"農曆年初二","2026-02-19":"農曆年初三",
@@ -545,7 +622,7 @@ function renderList(mm){
 function renderCats(mm){
   const box=$("cats");box.replaceChildren();
   const tot={};mm.filter(e=>e.kind!=="in").forEach(e=>tot[e.cat]=(tot[e.cat]||0)+e.amt);
-  const rows=CATS.filter(c=>tot[c.k]).sort((a,b)=>tot[b.k]-tot[a.k]);
+  const rows=CATS_ALL.filter(c=>tot[c.k]).sort((a,b)=>tot[b.k]-tot[a.k]);
   if(!rows.length){const p=document.createElement("div");p.className="empty";p.textContent="呢個月未有紀錄，撳月曆日子開始記 (´,,•ω•,,)";box.append(p);return}
   const max=Math.max(...rows.map(c=>tot[c.k]));
   rows.forEach(c=>{const r=document.createElement("div");r.className="cr";
@@ -608,7 +685,7 @@ function render(){renderCycle();renderFixed();renderCal()}
 
 /* sheet */
 function setKind(k,keepCat){kind=k;document.querySelectorAll("[data-k]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===k));
-  if(!keepCat){if(k==="in"&&!INCATS.some(c=>c.k===cat))cat="pay";if(k==="out"&&!CATS.some(c=>c.k===cat))cat="food"}drawChips()}
+  if(!keepCat){if(k==="in"&&!INCATS.some(c=>c.k===cat))cat="pay";if(k==="out"&&!CATS.some(c=>c.k===cat))cat=(CATS[0]||{k:"other"}).k}drawChips()}
 function drawChips(){const box=$("catChips");box.replaceChildren();
   (kind==="in"?INCATS:CATS).forEach(c=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=c.e+" "+c.n;b.setAttribute("aria-pressed",c.k===cat);b.onclick=()=>{cat=c.k;drawChips()};box.append(b)})}
 document.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>setKind(b.dataset.k));
@@ -618,7 +695,7 @@ function startEdit(e){editId=e.id;cat=e.cat;setKind(e.kind||"out",true);$("eAmt"
   $("editBar").hidden=false;$("eSave").textContent="更新";drawSheet();$("eAmt").focus()}
 $("editCancel").onclick=()=>{resetForm();drawSheet()};
 
-function openSheet(key){sel=key;resetForm();drawSheet();$("scrim").hidden=false;$("sheet").hidden=false;setTimeout(()=>{if(!editId)$("eAmt").focus()},50)}
+function openSheet(key){sel=key;resetForm();{const L=kind==="in"?INCATS:CATS;if(!L.some(c=>c.k===cat))cat=(L[0]||{k:"other"}).k}drawChips();drawSheet();$("scrim").hidden=false;$("sheet").hidden=false;setTimeout(()=>{if(!editId)$("eAmt").focus()},50)}
 function closeSheet(){$("scrim").hidden=true;$("sheet").hidden=true;sel=null;editId=null}
 function drawSheet(){
   if(!sel)return;const [y,m,d]=sel.split("-").map(Number);
@@ -749,7 +826,14 @@ $("carryBtn").onclick=()=>{const st=$("carryBtn").parentElement;if(st.querySelec
   i.onkeydown=e=>{if(e.key==="Enter")i.blur()};i.onblur=go;$("carryBtn").hidden=true;st.append(i);i.focus()};
 $("sGo").onclick=async()=>{if(!need())return;
   try{await db.doc("settings/main").set({...settings,saveGoal:parseFloat($("sSave").value)||0,funCap:parseFloat($("sFun").value)||0});toast("設定已儲存")}catch(e){toast("儲唔到")}};
-CATS.forEach(c=>{const o=document.createElement("option");o.value=c.k;o.textContent=c.e+" "+c.n;$("fxCat").append(o)});
+applyTags();
+{const b=$("tagList");b.addEventListener("focusin",()=>{b.dataset.busy=1});b.addEventListener("focusout",ev=>{if(b.contains(ev.relatedTarget))return;delete b.dataset.busy;if(b.dataset.dirty)renderTags()})}
+document.querySelectorAll("[data-tk]").forEach(b=>b.onclick=()=>{tagKind=b.dataset.tk;renderTags()});
+$("tAdd").onclick=()=>{const nn=$("tNewN").value.trim(),ne=$("tNewE").value.trim()||"🏷️";if(!nn){toast("要填 tag 名");return}
+  const T=tagsCfg();if([...BASE_CATS,...BASE_IN,...T.custom].some(c=>(T.over[c.k]?.n||c.n)===nn)){toast("已經有同名嘅 tag");return}
+  T.custom.push({k:"t"+Date.now().toString(36),n:nn,e:ne,c:TAG_COLORS[T.custom.length%TAG_COLORS.length],kind:tagKind});
+  setTags(T,true).then(ok=>{if(ok){toast(`加咗 ${ne} ${nn} 🏷️`);$("tNewN").value="";$("tNewE").value=""}})};
+$("tNewN").onkeydown=e=>{if(e.key==="Enter")$("tAdd").click()};
 $("fxName").oninput=()=>{$("fxCat").value=guessCat($("fxName").value)};
 $("fxAdd").onclick=()=>{const n=$("fxName").value.trim(),a=Math.round(parseFloat($("fxAmt").value)*100)/100;
   if(!n||!(a>0)){toast("要填名同金額");return}
@@ -935,7 +1019,7 @@ loadGhForm();
   db.collection("entries").onSnapshot(s=>{entries=s.docs.map(d=>({...d.data(),id:d.id})).filter(e=>e.date&&e.amt>0);render();drawSheet()});
   db.collection("days").onSnapshot(s=>{days=Object.fromEntries(s.docs.map(d=>[d.id,d.data()]));render();drawSheet()});
   db.collection("cycles").onSnapshot(s=>{cycles=Object.fromEntries(s.docs.map(d=>[d.id,d.data()]));render()});
-  db.doc("settings/main").onSnapshot(s=>{if(s.exists)settings={...settings,...s.data()};fillSettings();render()});
+  db.doc("settings/main").onSnapshot(s=>{if(s.exists)settings={...settings,...s.data()};applyTags();fillSettings();render();if(sel)drawChips()});
 })();
 </script>
 </body>
