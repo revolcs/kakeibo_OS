@@ -395,7 +395,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       <label>倉庫（用戶名/倉庫名）<input class="f" id="ghRepo" placeholder="例：yourname/kakeibo-data" autocomplete="off"></label>
       <label>檔案路徑<input class="f" id="ghPath" value="kakeibo.json" autocomplete="off"></label>
       <label>Token（只存喺呢部機）<input class="f" id="ghToken" type="password" autocomplete="off"></label>
-      <label class="ghchk"><input type="checkbox" id="ghAuto"> 改數之後自動上傳（停 15 秒後）</label>
+      <label class="ghchk"><input type="checkbox" id="ghAuto"> <span id="ghAutoLab">改數之後（15秒）自動上傳</span></label>
       <div class="brow">
         <button class="btn ghost" id="ghSave" type="button">💾 儲存設定</button>
         <button class="btn" id="ghUp" type="button">⬆️ 上傳</button>
@@ -866,6 +866,7 @@ function setTab(t){TAB=t==="note"?"note":"money";ls.set("kk-tab",TAB);
   document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tab===TAB));
   $("tabMoney").hidden=TAB!=="money";$("tabNote").hidden=TAB!=="note";
   $("tagBox").hidden=TAB==="note";$("goalBox").hidden=TAB==="note";$("ntagBox").hidden=TAB!=="note";
+  $("ghAutoLab").textContent=TAB==="note"?"記事之後（15秒）自動上傳":"改數之後（15秒）自動上傳";
   const v=TAB==="note"?nview:view;$("yIn").value=v.y;$("mIn").value=v.m;window.scrollTo(0,0)}
 document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 function ngo(y,m){if(m<1){m=12;y--}if(m>12){m=1;y++}nview={y,m};ls.set("kk-nview",JSON.stringify(nview));renderNCal()}
