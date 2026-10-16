@@ -238,6 +238,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .nwarn{font-size:.76rem;color:var(--soft)}
 .nrow .tx{cursor:pointer}
 .nrow .tx>b{display:block;overflow-wrap:anywhere}
+.nrow .mini{flex:0 0 auto}
 .nrow .when{font-family:var(--f-num);font-size:.78rem;font-weight:900;white-space:pre-line;text-align:right}
 .nrow.past{opacity:.55}
 .nrow.editing{outline:2px dashed var(--ink);outline-offset:2px;border-radius:8px}
@@ -869,10 +870,11 @@ function nRow(p,opt={}){
   const tx=document.createElement("div");tx.className="tx";tx.tabIndex=0;tx.setAttribute("role","button");tx.setAttribute("aria-label","編輯 "+p.title);
   const b=document.createElement("b");b.textContent=p.title;tx.append(b);
   const sub=[t.n!==p.title?t.n:"",p.area,p.dept,p.note].filter(Boolean).join(" ・ ");const s=document.createElement("small");s.textContent=sub;tx.append(s);
-  const go=()=>openNSheet(p.date,p);tx.onclick=go;tx.onkeydown=e=>{if(e.key==="Enter")go()};
+  const go=()=>{if(!$("nsheet").hidden&&nsel===p.date)startNEdit(p);else openNSheet(p.date,p);setTimeout(()=>{$("nTitle").focus({preventScroll:true});$("nTitle").scrollIntoView({behavior:"smooth",block:"center"})},60)};tx.onclick=go;tx.onkeydown=e=>{if(e.key==="Enter")go()};
   const w=document.createElement("span");w.className="when";w.textContent=opt.when!==undefined?opt.when:(p.time||"");
   r.append(ic,tx,w);
-  if(opt.del){const x=document.createElement("button");x.type="button";x.className="mini del";x.textContent="刪";x.setAttribute("aria-label","刪除 "+p.title);
+  if(opt.del){const ed=document.createElement("button");ed.type="button";ed.className="mini";ed.textContent=p.id===nedit?"改緊":"改";ed.setAttribute("aria-label","修改 "+p.title);
+    ed.onclick=ev=>{ev.stopPropagation();go()};r.append(ed);const x=document.createElement("button");x.type="button";x.className="mini del";x.textContent="刪";x.setAttribute("aria-label","刪除 "+p.title);
     x.onclick=ev=>{ev.stopPropagation();if(x.dataset.arm){delN(p.id)}else{x.dataset.arm=1;x.textContent="確定？";setTimeout(()=>{if(x.isConnected){delete x.dataset.arm;x.textContent="刪"}},2500)}};r.append(x)}
   return r}
 
