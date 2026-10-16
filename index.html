@@ -231,6 +231,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 /* 記事表格：iPhone 嘅日期／時間格會撐大，要鎖住闊度 */
 .ngrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 .ngrid>*{min-width:0;max-width:100%}
+.ntime{display:flex;gap:6px;align-items:center}.ntime select{flex:1;min-width:0}.ntime b{font-weight:900}
 .nfld{display:flex;flex-direction:column;gap:2px;min-width:0}
 .nfld>span{font-size:.72rem;font-weight:900;color:var(--soft)}
 .ngrid input.f{width:100%;min-width:0;max-width:100%;display:block}
@@ -450,11 +451,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     <input class="f" id="nTitle" placeholder="內容，例：覆診 / 約食飯" aria-label="內容" autocomplete="off">
     <div class="ngrid">
       <label class="nfld"><span>日期</span><input class="f num" id="nDate" type="date"></label>
-      <label class="nfld"><span>時間（可以唔填）</span><input class="f num" id="nTime" type="time"></label>
-      <input class="f" id="nArea" list="dlArea" placeholder="地區（可以唔填）" aria-label="地區" autocomplete="off">
-      <input class="f" id="nDept" list="dlDept" placeholder="科別（可以唔填）" aria-label="科別" autocomplete="off">
+      <div class="nfld"><span>時間（24 小時制，可以唔填）</span><div class="ntime"><select class="f num" id="nHr" aria-label="小時"></select><b>:</b><select class="f num" id="nMn" aria-label="分鐘"></select></div></div>
+      <input class="f" id="nArea" list="dlArea" placeholder="地區（可以唔填）" aria-label="地區" autocomplete="off" style="grid-column:1 / -1">
     </div>
-    <datalist id="dlArea"></datalist><datalist id="dlDept"></datalist>
+    <datalist id="dlArea"></datalist>
     <input class="f" id="nNote" placeholder="備註（可以唔填）" aria-label="備註" autocomplete="off">
     <button class="btn" id="nSave" type="button">記低！</button>
   </div>
@@ -856,6 +856,11 @@ const nByTime=(a,b)=>nKey(a).localeCompare(nKey(b));
 const mdw=k=>{const [y,m,d]=k.split("-").map(Number);return `${m}/${d}（${WD[new Date(y,m-1,d).getDay()]}）`};
 async function setNTags(list){if(!need())return false;try{await db.doc("plancfg/main").set({...plancfg,tags:list});return true}catch(e){toast("儲唔到");return false}}
 
+/* 時間：24 小時制（兩個下拉），唔受手機語言／AM-PM 影響 */
+{const h=$("nHr"),m=$("nMn");h.append(new Option("--",""));for(let i=0;i<24;i++)h.append(new Option(pad(i),pad(i)));
+ m.append(new Option("--",""));for(let i=0;i<60;i++)m.append(new Option(pad(i),pad(i)));}
+const nTimeGet=()=>{const h=$("nHr").value;return h===""?"":h+":"+($("nMn").value||"00")};
+function nTimeSet(v){const [h,m]=(v||"").split(":");$("nHr").value=h||"";$("nMn").value=m||""}
 /* 分頁 */
 function setTab(t){TAB=t==="note"?"note":"money";ls.set("kk-tab",TAB);
   document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tab===TAB));
@@ -872,7 +877,7 @@ function nRow(p,opt={}){
   const ic=document.createElement("span");ic.className="ic";ic.textContent=t.e;
   const tx=document.createElement("div");tx.className="tx";tx.tabIndex=0;tx.setAttribute("role","button");tx.setAttribute("aria-label","編輯 "+p.title);
   const b=document.createElement("b");b.textContent=HIDE?"●●●":p.title;tx.append(b);
-  const mk=v=>v?(HIDE?"●●●":v):"";const sub=[t.n!==p.title?t.n:"",mk(p.area),mk(p.dept),mk(p.note)].filter(Boolean).join(" ・ ");const s=document.createElement("small");s.textContent=sub;tx.append(s);
+  const mk=v=>v?(HIDE?"●●●":v):"";const sub=[t.n!==p.title?t.n:"",mk(p.area),mk(p.note)].filter(Boolean).join(" ・ ");const s=document.createElement("small");s.textContent=sub;tx.append(s);
   const go=()=>{if(!$("nsheet").hidden&&nsel===p.date)startNEdit(p);else openNSheet(p.date,p);setTimeout(()=>{$("nTitle").focus({preventScroll:true});$("nTitle").scrollIntoView({behavior:"smooth",block:"center"})},60)};tx.onclick=go;tx.onkeydown=e=>{if(e.key==="Enter")go()};
   const w=document.createElement("span");w.className="when";w.textContent=opt.when!==undefined?opt.when:(p.time||"");
   r.append(ic,tx,w);
@@ -954,9 +959,9 @@ $("ntNewN").onkeydown=e=>{if(e.key==="Enter")$("ntAdd").click()};
 /* 記事彈出面板 */
 function drawNChips(){const box=$("nChips");box.replaceChildren();
   ntags().forEach(c=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=c.e+" "+c.n;b.setAttribute("aria-pressed",c.k===ntagSel);b.onclick=()=>{ntagSel=c.k;drawNChips()};box.append(b)})}
-function resetNForm(){nedit=null;$("nEditBar").hidden=true;$("nSave").textContent="記低！";["nTitle","nTime","nArea","nDept","nNote"].forEach(i=>$(i).value="");$("nDate").value=nsel||todayStr();
+function resetNForm(){nedit=null;$("nEditBar").hidden=true;$("nSave").textContent="記低！";["nTitle","nArea","nNote"].forEach(i=>$(i).value="");nTimeSet("");$("nDate").value=nsel||todayStr();
   if(!ntags().some(t=>t.k===ntagSel))ntagSel=ntags()[0].k}
-function startNEdit(p){nedit=p.id;ntagSel=p.tag;$("nTitle").value=p.title||"";$("nDate").value=p.date;$("nTime").value=p.time||"";$("nArea").value=p.area||"";$("nDept").value=p.dept||"";$("nNote").value=p.note||"";
+function startNEdit(p){nedit=p.id;ntagSel=p.tag;$("nTitle").value=p.title||"";$("nDate").value=p.date;nTimeSet(p.time);$("nArea").value=p.area||"";$("nNote").value=p.note||"";
   $("nEditBar").hidden=false;$("nSave").textContent="更新";drawNSheet()}
 function openNSheet(key,p){nsel=key;resetNForm();if(p)startNEdit(p);else drawNSheet();$("nscrim").hidden=false;$("nsheet").hidden=false;setTimeout(()=>$("nTitle").focus({preventScroll:true}),50)}
 function closeNSheet(){$("nscrim").hidden=true;$("nsheet").hidden=true;nsel=null;nedit=null}
@@ -966,16 +971,16 @@ function drawNSheet(){if(!nsel)return;const [y,m,d]=nsel.split("-").map(Number);
   if(!ps.length){const e=document.createElement("div");e.className="empty";e.textContent="呢日未有記錄";box.append(e)}
   ps.forEach(p=>box.append(nRow(p,{del:true})));drawNChips();
   const fill=(id,key)=>{const dl=$(id);dl.replaceChildren();[...new Set(plans.map(p=>p[key]).filter(Boolean))].sort().forEach(v=>{const o=document.createElement("option");o.value=v;dl.append(o)})};
-  fill("dlArea","area");fill("dlDept","dept")}
+  fill("dlArea","area")}
 async function saveN(){const title=$("nTitle").value.trim(),date=$("nDate").value;
   if(!title){toast("寫低內容先 (´,,•ω•,,)");$("nTitle").focus();return}
   if(!date){toast("要揀日期");return}if(!need())return;
   const old=nedit?plans.find(x=>x.id===nedit):null;
-  const d={tag:ntagSel,title,date,time:$("nTime").value,area:$("nArea").value.trim(),dept:$("nDept").value.trim(),note:$("nNote").value.trim(),ts:old?old.ts||Date.now():Date.now()};
+  const d={tag:ntagSel,title,date,time:nTimeGet(),area:$("nArea").value.trim(),note:$("nNote").value.trim(),ts:old?old.ts||Date.now():Date.now()};
   try{if(old)await db.doc("plans/"+old.id).set(d);else await db.collection("plans").add(d);
     toast(old?"更新咗 ✔":"記低咗 📒");nsel=date;resetNForm();drawNSheet()}catch(e){toast("儲唔到："+(e.message||e.code))}}
 async function delN(id){if(!need())return;try{await db.doc("plans/"+id).delete();if(nedit===id)resetNForm();toast("刪咗")}catch(e){toast("刪唔到："+(e.message||e.code))}}
-$("nSave").onclick=saveN;["nTitle","nArea","nDept","nNote"].forEach(i=>$(i).onkeydown=e=>{if(e.key==="Enter")saveN()});
+$("nSave").onclick=saveN;["nTitle","nArea","nNote"].forEach(i=>$(i).onkeydown=e=>{if(e.key==="Enter")saveN()});
 $("nEditCancel").onclick=()=>{resetNForm();drawNSheet()};
 $("nshClose").onclick=closeNSheet;$("nscrim").onclick=closeNSheet;
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("nsheet").hidden&&!document.getElementById("emoPop"))closeNSheet()});
