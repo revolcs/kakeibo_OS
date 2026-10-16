@@ -871,8 +871,8 @@ function nRow(p,opt={}){
   r.className="ent nrow"+(opt.cls||"")+(p.date<todayStr()?" past":"")+(p.id===nedit?" editing":"");
   const ic=document.createElement("span");ic.className="ic";ic.textContent=t.e;
   const tx=document.createElement("div");tx.className="tx";tx.tabIndex=0;tx.setAttribute("role","button");tx.setAttribute("aria-label","編輯 "+p.title);
-  const b=document.createElement("b");b.textContent=p.title;tx.append(b);
-  const sub=[t.n!==p.title?t.n:"",p.area,p.dept,p.note].filter(Boolean).join(" ・ ");const s=document.createElement("small");s.textContent=sub;tx.append(s);
+  const b=document.createElement("b");b.textContent=HIDE?"●●●":p.title;tx.append(b);
+  const mk=v=>v?(HIDE?"●●●":v):"";const sub=[t.n!==p.title?t.n:"",mk(p.area),mk(p.dept),mk(p.note)].filter(Boolean).join(" ・ ");const s=document.createElement("small");s.textContent=sub;tx.append(s);
   const go=()=>{if(!$("nsheet").hidden&&nsel===p.date)startNEdit(p);else openNSheet(p.date,p);setTimeout(()=>{$("nTitle").focus({preventScroll:true});$("nTitle").scrollIntoView({behavior:"smooth",block:"center"})},60)};tx.onclick=go;tx.onkeydown=e=>{if(e.key==="Enter")go()};
   const w=document.createElement("span");w.className="when";w.textContent=opt.when!==undefined?opt.when:(p.time||"");
   r.append(ic,tx,w);
@@ -889,7 +889,7 @@ function nDayCell(key,adj){
   b.className="day s"+wd+(adj?" adj":"")+(ps.length?" nhas":"")+(key===tdy?" today":"")+(hol?" hol"+(key<tdy?" holpast":""):"");
   const dn=document.createElement("span");dn.className="d";dn.textContent=d;b.append(dn);
   if(hol){const h=document.createElement("span");h.className="hn";h.textContent=ps.length?(HOL_SHORT[hol]||hol):hol;b.append(h)}
-  if(ps.length){const c=document.createElement("span");c.className="ncnt";c.textContent=ps.length+"件";b.append(c);const t=document.createElement("span");t.className="nt";t.textContent=ps[0].title;b.append(t)}
+  if(ps.length){const c=document.createElement("span");c.className="ncnt";c.textContent=ps.length+"件";b.append(c);const t=document.createElement("span");t.className="nt";t.textContent=HIDE?"●●●":ps[0].title;b.append(t)}
   const e=document.createElement("span");e.className="ne";e.textContent=ps.slice(0,3).map(p=>ntag(p.tag).e).join("")+(ps.length>3?"+":"");b.append(e);
   b.setAttribute("aria-label",`${m}月${d}日${hol?"，"+hol:""}${ps.length?`，${ps.length} 項記錄：`+ps.map(p=>p.title).join("、"):""}`);
   b.onclick=()=>openNSheet(key);return b}
@@ -1206,7 +1206,7 @@ setInterval(()=>{if(themeMode==="auto")applyThemeMode()},60000);
     d.addEventListener("toggle",()=>{folds[k]=d.open;ls.set("kk-fold",JSON.stringify(folds))})})}
 applyThemeMode();
 function paintHide(){$("hideBtn").textContent=HIDE?"🙈":"🙉";$("hideBtn").setAttribute("aria-label",HIDE?"顯示金額":"隱藏金額");$("hideBtn").setAttribute("aria-pressed",HIDE)}
-$("hideBtn").onclick=()=>{HIDE=!HIDE;try{localStorage.setItem("kk-hide",HIDE?"1":"0")}catch(e){}paintHide();render();drawSheet();toast(HIDE?"金額已隱藏 🙈":"金額顯示中 🙉")};
+$("hideBtn").onclick=()=>{HIDE=!HIDE;try{localStorage.setItem("kk-hide",HIDE?"1":"0")}catch(e){}paintHide();render();drawSheet();renderNote();toast(HIDE?"金額已隱藏 🙈":"金額顯示中 🙉")};
 paintHide();
 
 setKind("out");fillSettings();render();
