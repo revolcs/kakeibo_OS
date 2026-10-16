@@ -355,15 +355,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     <div class="dl" id="nList"></div>
   </section>
 
-  <section class="card" aria-labelledby="ntagH">
-    <h2 id="ntagH" class="foldh">🏷️ 記事 tag <small>同記帳嘅 tag 分開；▲▼ 調次序</small><button class="foldbtn" type="button" aria-expanded="true" aria-label="收起或者打開記事 tag">▾</button></h2>
-    <div id="nTagList" style="display:flex;flex-direction:column;gap:6px"></div>
-    <div class="tagrow">
-      <button class="f tem tembtn" id="ntNewE" type="button" aria-label="新 tag 嘅 emoji，撳嚟揀">🏷️</button>
-      <input class="f tn" id="ntNewN" placeholder="新 tag 名，例：剪髮" aria-label="新 tag 名稱" style="flex:1">
-      <button class="mini acc" id="ntAdd" type="button">＋加</button>
-    </div>
-  </section>
   <p class="nwarn" style="text-align:center;margin-top:14px">🔒 記事同記帳數據分開儲存，唔會互相覆蓋；☁️ GitHub 同步（頁底「⚙️ 設定」）會一齊上載。<br>建議寫「覆診」就夠，唔好寫診斷、全名、詳細地址。</p>
   </div>
   <section class="card" aria-labelledby="setH">
@@ -378,6 +369,15 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
         <button class="mini acc" id="tAdd" type="button">＋加</button>
       </div>
       <span class="hint">▲▼ 調次序；撳 emoji 揀圖案；改名撳 Enter，或者撳去第二行就會自動儲存。收起咗嘅 tag 唔會喺記數時出現，舊紀錄照保留。有紀錄用緊嘅 tag 唔刪得，可以收起。</span>
+    </details>
+    <details class="tagbox" id="ntagBox">
+      <summary><b>🏷️ 我的 tag</b><span class="hint">記事用：改名、換 emoji、加新 tag、▲▼ 調次序</span></summary>
+    <div id="nTagList" style="display:flex;flex-direction:column;gap:6px"></div>
+    <div class="tagrow">
+      <button class="f tem tembtn" id="ntNewE" type="button" aria-label="新 tag 嘅 emoji，撳嚟揀">🏷️</button>
+      <input class="f tn" id="ntNewN" placeholder="新 tag 名，例：剪髮" aria-label="新 tag 名稱" style="flex:1">
+      <button class="mini acc" id="ntAdd" type="button">＋加</button>
+    </div>
     </details>
     <details class="tagbox" id="goalBox">
       <summary><b>🎯 理想金額設定</b><span class="hint">每期儲蓄目標、開心錢上限</span></summary>
@@ -860,6 +860,7 @@ async function setNTags(list){if(!need())return false;try{await db.doc("plancfg/
 function setTab(t){TAB=t==="note"?"note":"money";ls.set("kk-tab",TAB);
   document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tab===TAB));
   $("tabMoney").hidden=TAB!=="money";$("tabNote").hidden=TAB!=="note";
+  $("tagBox").hidden=TAB==="note";$("goalBox").hidden=TAB==="note";$("ntagBox").hidden=TAB!=="note";
   const v=TAB==="note"?nview:view;$("yIn").value=v.y;$("mIn").value=v.m;window.scrollTo(0,0)}
 document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 function ngo(y,m){if(m<1){m=12;y--}if(m>12){m=1;y++}nview={y,m};ls.set("kk-nview",JSON.stringify(nview));renderNCal()}
