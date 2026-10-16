@@ -628,7 +628,7 @@ function cycleOf(dstr){
 function cycleStats(c){
   const inC=entries.filter(e=>e.date>=c.start&&e.date<=c.end);
   const sum=f=>inC.filter(f).reduce((s,e)=>s+e.amt,0);
-  return {inc:sum(e=>e.kind==="in"),out:sum(e=>e.kind!=="in"),save:sum(e=>e.cat==="save"),fun:sum(e=>ALL[e.cat]?.fun)};
+  return {inc:sum(e=>e.kind==="in"),pay:sum(e=>e.kind==="in"&&e.cat==="pay"),out:sum(e=>e.kind!=="in"),save:sum(e=>e.cat==="save"),fun:sum(e=>ALL[e.cat]?.fun)};
 }
 /* 某日 23:59 嘅戶口結餘：由最近一次對數（settings.balance）推返去
    對數之後先記、日期喺嗰日或之前嘅紀錄 → 照加減；對數之前已記、日期喺嗰日之後嘅紀錄 → 扣返出嚟 */
@@ -683,7 +683,7 @@ function renderCycle(){
   $("carryLab").textContent=cr.auto?(cr.fromBal?"上期剩低（出糧前一日結餘）":"上期剩低（自動計）"):"上期剩低";
   $("carryBtn").textContent=money(cr.v);
   lastBal=bal;lastInc=st.inc;
-  $("incV").textContent=money(st.inc);$("outV").textContent=money(st.out);$("balBtn").textContent=money(bal);
+  $("incV").textContent=money(st.pay);$("outV").textContent=money(st.out);$("balBtn").textContent=money(bal);
   if(mb&&typeof mb.amt==="number"){const [,bm,bd]=mb.date.split("-");$("balLab").textContent="戶口結餘";
     $("balHint").textContent=`${+bm}/${+bd} 對數 ${money(mb.amt)}`+(Math.abs(bal-est)>=0.01?`・估算差 ${money(bal-est)}`:"")}
   else{$("balLab").textContent="戶口結餘（估算）";$("balHint").textContent="撳數字填真實結餘"}
