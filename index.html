@@ -1206,7 +1206,7 @@ setInterval(()=>{if(themeMode==="auto")applyThemeMode()},60000);
     d.addEventListener("toggle",()=>{folds[k]=d.open;ls.set("kk-fold",JSON.stringify(folds))})})}
 applyThemeMode();
 function paintHide(){$("hideBtn").textContent=HIDE?"🙈":"🙉";$("hideBtn").setAttribute("aria-label",HIDE?"顯示金額":"隱藏金額");$("hideBtn").setAttribute("aria-pressed",HIDE)}
-$("hideBtn").onclick=()=>{HIDE=!HIDE;try{localStorage.setItem("kk-hide",HIDE?"1":"0")}catch(e){}paintHide();render();drawSheet();renderNote();toast(HIDE?"金額已隱藏 🙈":"金額顯示中 🙉")};
+$("hideBtn").onclick=()=>{HIDE=!HIDE;try{localStorage.setItem("kk-hide",HIDE?"1":"0")}catch(e){}paintHide();render();drawSheet();renderNote();toast(HIDE?"隱藏中 🙈":"顯示中 🙉")};
 paintHide();
 
 setKind("out");fillSettings();render();
