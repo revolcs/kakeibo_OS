@@ -161,6 +161,9 @@ input.f:focus{border-color:var(--ink);outline:none}
 .cr .bar{height:14px;border-radius:6px;background:var(--tile);overflow:hidden}
 .cr .bar i{display:block;height:100%;border-radius:6px}
 .cr b{font-family:var(--f-num);font-size:.85rem}
+.incsum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:4px}
+.incsum div{background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:6px 8px;min-width:0;font-size:.74rem;color:var(--soft)}
+.incsum b{display:block;font-family:var(--f-num);font-size:.92rem;color:var(--ink);overflow-wrap:anywhere}
 .empty{font-size:.85rem;color:var(--soft);text-align:center;padding:10px}
 
 /* sheet */
@@ -778,6 +781,11 @@ function renderList(mm){
 
 function renderCats(mm){
   const box=$("cats");box.replaceChildren();
+  /* 本月收入：人工 ＋ 其他收入 ＝ 全收入 */
+  const ins=mm.filter(e=>e.kind==="in"),ip=ins.filter(e=>e.cat==="pay").reduce((s,e)=>s+e.amt,0),all=ins.reduce((s,e)=>s+e.amt,0),io=Math.round((all-ip)*100)/100;
+  const sm=document.createElement("div");sm.className="incsum";
+  [["💼 人工",ip],["🎁 其他收入",io],["💰 全收入",Math.round((ip+io)*100)/100]].forEach(([l,v])=>{const d=document.createElement("div");const s=document.createElement("span");s.textContent=l;const b=document.createElement("b");b.textContent=money(v);d.append(s,b);sm.append(d)});
+  box.append(sm);
   const tot={};mm.filter(e=>e.kind!=="in").forEach(e=>tot[e.cat]=(tot[e.cat]||0)+e.amt);
   const rows=CATS_ALL.filter(c=>tot[c.k]).sort((a,b)=>tot[b.k]-tot[a.k]);
   if(!rows.length){const p=document.createElement("div");p.className="empty";p.textContent="呢個月未有紀錄，撳月曆日子開始記 (´,,•ω•,,)";box.append(p);return}
