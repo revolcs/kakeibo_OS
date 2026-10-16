@@ -217,6 +217,21 @@ input.f:focus{border-color:var(--ink);outline:none}
 .foot{margin-top:28px;text-align:center;font-size:.75rem;color:var(--soft)}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* 🗓️ 約會／To do */
+.plform{display:flex;flex-direction:column;gap:8px}
+.plgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.plgrid .f{width:100%}
+.plwarn{font-size:.76rem;color:var(--soft)}
+.plchk{flex:0 0 auto;width:2em;height:2em;border:2px solid var(--ink);border-radius:9px;background:var(--paper);color:var(--ink);font:inherit;font-weight:900;cursor:pointer;line-height:1}
+.plchk[aria-pressed="true"]{background:var(--today)}
+.plrow.done .tx>b{text-decoration:line-through;opacity:.55}
+.plrow .tx{cursor:pointer;min-width:0}
+.plrow .tx>b{display:block;font-weight:900;overflow-wrap:anywhere}
+.plrow .when{font-family:var(--f-num);font-size:.78rem;font-weight:900;white-space:nowrap;text-align:right}
+.plrow.late .when{color:var(--sun)}
+.plrow.editing{outline:2px dashed var(--ink);outline-offset:2px;border-radius:8px}
+.plsub{font-weight:900;font-size:.82rem;margin-top:6px}
+details.pldone>summary{cursor:pointer;font-size:.85rem;color:var(--soft);font-weight:900}
 </style>
 </head>
 <body>
@@ -276,8 +291,30 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   <section class="card" aria-labelledby="calH">
     <h2 id="calH">📅 <span id="calTitle"></span> <small id="monthSum"></small></h2>
     <div class="cal" id="cal"></div>
-    <div class="legend"><span><b style="color:var(--zero)">0！</b> 零消費</span><span>🐷 有儲錢</span><span>💰 出糧日（淡色 = 預計）</span><span style="color:var(--sun)">紅字 = 公眾假期</span><span style="color:var(--big)">紫色格 = 單日 $2,000+</span><span>虛線格 = 上／下個月</span><span>👆 喺月曆上下撥（手機）／滾輪（電腦）= 轉月</span></div>
+    <div class="legend"><span><b style="color:var(--zero)">0！</b> 零消費</span><span>🐷 有儲錢</span><span>🗓️ 有安排</span><span>💰 出糧日（淡色 = 預計）</span><span style="color:var(--sun)">紅字 = 公眾假期</span><span style="color:var(--big)">紫色格 = 單日 $2,000+</span><span>虛線格 = 上／下個月</span><span>👆 喺月曆上下撥（手機）／滾輪（電腦）= 轉月</span></div>
     <div class="hols" id="hols"></div>
+  </section>
+
+  <section class="card" aria-labelledby="plH">
+    <h2 id="plH" class="foldh">🗓️ 約會／To do <small>邊區、邊科、幾點；或者純粹記低要做嘅事</small><button class="foldbtn" type="button" aria-expanded="true" aria-label="收起或者打開約會同To do">▾</button></h2>
+    <div id="plList"></div>
+    <div class="plform">
+      <div class="chips" role="group" aria-label="類型">
+        <button class="chip" data-pk="appt" aria-pressed="true" type="button">🗓️ 約會</button>
+        <button class="chip" data-pk="todo" aria-pressed="false" type="button">📝 To do</button>
+      </div>
+      <input class="f" id="pTitle" placeholder="內容，例：覆診 / 約食飯" aria-label="內容" autocomplete="off">
+      <div class="plgrid">
+        <input class="f num" id="pDate" type="date" aria-label="日期">
+        <input class="f num" id="pTime" type="time" aria-label="時間">
+        <input class="f" id="pArea" list="dlArea" placeholder="地區，例：旺角" aria-label="地區" autocomplete="off">
+        <input class="f" id="pDept" list="dlDept" placeholder="科別，例：牙科" aria-label="科別" autocomplete="off">
+      </div>
+      <datalist id="dlArea"></datalist><datalist id="dlDept"></datalist>
+      <input class="f" id="pNote" placeholder="備註（可以唔填）" aria-label="備註" autocomplete="off">
+      <div class="brow"><button class="btn" id="pSave" type="button" style="flex:1">記低</button><button class="mini" id="pCancel" type="button" hidden>取消編輯</button></div>
+      <div class="plwarn">🔒 會存落你嘅私人 repo。建議寫「覆診」就夠，唔好寫診斷、全名、詳細地址。</div>
+    </div>
   </section>
 
   <section class="card" aria-labelledby="fxH">
@@ -357,6 +394,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   <div class="sheet-in">
     <div class="shh"><h2 id="shTitle"></h2><button class="mini" id="shClose" type="button">關閉</button></div>
     <div id="shList"></div>
+    <div id="shPlans"></div>
     <div class="editbar" id="editBar" hidden><span>✏️ 編輯緊呢筆</span><button class="mini" id="editCancel" type="button">取消編輯</button></div>
     <div id="zeroWrap"></div>
     <div style="display:flex;flex-direction:column;gap:8px">
@@ -521,7 +559,7 @@ const todayStr=()=>fromD(new Date());
 const WD="日一二三四五六";
 const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 
-let entries=[],days={},cycles={},settings={saveGoal:3000,funCap:6000},lastBal=0,lastInc=0;
+let entries=[],plans=[],days={},cycles={},settings={saveGoal:3000,funCap:6000},lastBal=0,lastInc=0;
 let db=null,view,sel=null,kind="out",cat="food",editId=null;
 {const t=new Date(),saved=ls.get("kk-view");view=saved?JSON.parse(saved):{y:t.getFullYear(),m:t.getMonth()+1}}
 
@@ -634,10 +672,11 @@ function dayCell(key,adj){
   const mid=document.createElement("span");
   if(hol&&!out&&!zero){mid.className="hn";mid.textContent=hol}else{mid.className="amt"+(zero?" z0":"");mid.textContent=out?cellAmt(out):(zero?"0！":"")}
   let hs=null;if(hol&&(out||zero)){hs=document.createElement("span");hs.className="hn hs";hs.textContent=HOL_SHORT[hol]||hol}
-  const tg=document.createElement("span");tg.className="tag";tg.textContent=(saved?"🐷":"")+(pay?"💰":"");
+  const hasPl=plans.some(p=>p.date===key&&!p.done);
+  const tg=document.createElement("span");tg.className="tag";tg.textContent=(saved?"🐷":"")+(pay?"💰":"")+(hasPl?"🗓️":"");
   if(plan){const pl=document.createElement("span");pl.className="pl";pl.textContent="💰";tg.append(pl)}
   b.append(dn,...(hs?[hs]:[]),mid,tg);
-  b.setAttribute("aria-label",`${m}月${d}日${hol?"，"+hol:""}，支出 ${money(out)}${zero?"，零消費":""}`);
+  b.setAttribute("aria-label",`${m}月${d}日${hol?"，"+hol:""}，支出 ${money(out)}${zero?"，零消費":""}${hasPl?"，有安排":""}`);
   b.onclick=()=>openSheet(key);
   return b;
 }
@@ -756,7 +795,67 @@ function drawQuick(){const q=$("quick");q.replaceChildren();
   presets().forEach(p=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=`📌 ${p.name} ${short(p.amt)}`;b.onclick=()=>fillFrom(p);q.append(b)});
   q.hidden=!presets().length}
 
-function render(){renderCycle();renderFixed();renderCal()}
+function render(){renderCycle();renderFixed();renderCal();renderPlans()}
+
+
+/* 🗓️ 約會／To do：plans 集合 {kind:"appt"|"todo", title, date, time, area, dept, note, done, ts} */
+let planKind="appt",planEdit=null;
+const PL_E={appt:"🗓️",todo:"📝"};
+const planKey=p=>(p.date||"9999-99-99")+" "+(p.time||"99:99");
+const planWhen=p=>{let s="";if(p.date){const [y,m,d]=p.date.split("-").map(Number);s=`${m}/${d}（${WD[new Date(y,m-1,d).getDay()]}）`}return s+(p.time?(s?"\n":"")+p.time:"")};
+function setPlanKind(k){planKind=k;document.querySelectorAll("[data-pk]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.pk===k));
+  $("pDept").hidden=k==="todo";$("pArea").style.gridColumn=k==="todo"?"1 / -1":""}
+document.querySelectorAll("[data-pk]").forEach(b=>b.onclick=()=>setPlanKind(b.dataset.pk));
+function resetPlan(date){planEdit=null;$("pTitle").value="";$("pDate").value=date||"";$("pTime").value="";$("pArea").value="";$("pDept").value="";$("pNote").value="";
+  $("pSave").textContent="記低";$("pCancel").hidden=true;renderPlans()}
+function startPlanEdit(p){planEdit=p.id;setPlanKind(p.kind||"appt");$("pTitle").value=p.title||"";$("pDate").value=p.date||"";$("pTime").value=p.time||"";
+  $("pArea").value=p.area||"";$("pDept").value=p.dept||"";$("pNote").value=p.note||"";$("pSave").textContent="更新";$("pCancel").hidden=false;renderPlans();
+  const sec=$("plH").closest("section");if(sec.classList.contains("folded"))sec.querySelector(".foldbtn").click();$("pTitle").focus()}
+$("pCancel").onclick=()=>resetPlan();
+async function savePlan(){
+  const title=$("pTitle").value.trim(),date=$("pDate").value;
+  if(!title){toast("寫低內容先 (´,,•ω•,,)");$("pTitle").focus();return}
+  if(planKind==="appt"&&!date){toast("約會要揀日期");$("pDate").focus();return}
+  if(!need())return;
+  const old=planEdit?plans.find(x=>x.id===planEdit):null;
+  const d={kind:planKind,title,date,time:$("pTime").value,area:$("pArea").value.trim(),dept:planKind==="todo"?"":$("pDept").value.trim(),note:$("pNote").value.trim(),done:old?!!old.done:false,ts:old?old.ts||Date.now():Date.now()};
+  try{if(old)await db.doc("plans/"+old.id).set(d);else await db.collection("plans").add(d);
+    toast(old?"更新咗 ✔":"記低咗 🗓️");resetPlan(planKind==="appt"?"":"")}catch(e){toast("儲唔到："+(e.message||e.code))}}
+$("pSave").onclick=savePlan;
+["pTitle","pArea","pDept","pNote"].forEach(i=>$(i).onkeydown=e=>{if(e.key==="Enter")savePlan()});
+async function togglePlan(p){if(!need())return;try{const {id,...d}=p;await db.doc("plans/"+id).set({...d,done:!p.done})}catch(e){toast("改唔到")}}
+async function delPlan(id){if(!need())return;try{await db.doc("plans/"+id).delete();if(planEdit===id)resetPlan();toast("刪咗")}catch(e){toast("刪唔到："+(e.message||e.code))}}
+function planRow(p){
+  const r=document.createElement("div");r.className="ent plrow"+(p.done?" done":"")+(!p.done&&p.date&&p.date<todayStr()?" late":"")+(p.id===planEdit?" editing":"");
+  const c=document.createElement("button");c.type="button";c.className="plchk";c.setAttribute("aria-pressed",!!p.done);c.textContent=p.done?"✔":"";
+  c.setAttribute("aria-label",(p.done?"取消完成：":"標記完成：")+p.title);c.onclick=()=>togglePlan(p);
+  const tx=document.createElement("div");tx.className="tx";tx.tabIndex=0;tx.setAttribute("role","button");tx.setAttribute("aria-label","編輯 "+p.title);
+  const b=document.createElement("b");b.textContent=PL_E[p.kind||"appt"]+" "+p.title;tx.append(b);
+  const sub=[p.area,p.dept,p.note].filter(Boolean).join(" ・ ");if(sub){const s=document.createElement("small");s.textContent=sub;tx.append(s)}
+  tx.onclick=()=>startPlanEdit(p);tx.onkeydown=e=>{if(e.key==="Enter")startPlanEdit(p)};
+  const w=document.createElement("span");w.className="when";w.style.whiteSpace="pre-line";w.textContent=planWhen(p);
+  const x=document.createElement("button");x.type="button";x.className="mini del";x.textContent="刪";x.setAttribute("aria-label","刪除 "+p.title);
+  x.onclick=ev=>{ev.stopPropagation();if(x.dataset.arm){delPlan(p.id)}else{x.dataset.arm=1;x.textContent="確定？";setTimeout(()=>{if(x.isConnected){delete x.dataset.arm;x.textContent="刪"}},2500)}};
+  r.append(c,tx,w,x);return r}
+function renderPlans(){
+  const box=$("plList");if(!box)return;box.replaceChildren();
+  const open=plans.filter(p=>!p.done).sort((a,b)=>planKey(a).localeCompare(planKey(b))),done=plans.filter(p=>p.done).sort((a,b)=>planKey(b).localeCompare(planKey(a)));
+  if(!open.length){const e=document.createElement("div");e.className="empty";e.textContent="暫時冇安排 (๑˃ᴗ˂)ﻭ";box.append(e)}
+  const dated=open.filter(p=>p.date),und=open.filter(p=>!p.date);
+  dated.forEach(p=>box.append(planRow(p)));
+  if(und.length){const h=document.createElement("div");h.className="plsub";h.textContent="📝 未定日子";box.append(h);und.forEach(p=>box.append(planRow(p)))}
+  if(done.length){const d=document.createElement("details");d.className="pldone";const s=document.createElement("summary");s.textContent=`✔ 已完成（${done.length}）`;d.append(s);done.forEach(p=>d.append(planRow(p)));box.append(d)}
+  const fill=(id,key)=>{const dl=$(id);dl.replaceChildren();[...new Set(plans.map(p=>p[key]).filter(Boolean))].sort().forEach(v=>{const o=document.createElement("option");o.value=v;dl.append(o)})};
+  fill("dlArea","area");fill("dlDept","dept")}
+/* 日子彈出面板入面嘅安排 */
+function renderShPlans(){
+  const box=$("shPlans");if(!box)return;box.replaceChildren();if(!sel)return;
+  const ps=plans.filter(p=>p.date===sel).sort((a,b)=>planKey(a).localeCompare(planKey(b)));
+  if(ps.length){const h=document.createElement("div");h.className="plsub";h.textContent="🗓️ 呢日安排";box.append(h);ps.forEach(p=>box.append(planRow(p)))}
+  const b=document.createElement("button");b.type="button";b.className="btn ghost";b.style.width="100%";b.style.marginTop="8px";b.textContent="＋ 加約會／To do";
+  b.onclick=()=>{const k=sel;closeSheet();resetPlan(k);setPlanKind("appt");const sec=$("plH").closest("section");if(sec.classList.contains("folded"))sec.querySelector(".foldbtn").click();
+    sec.scrollIntoView({behavior:"smooth",block:"start"});setTimeout(()=>$("pTitle").focus({preventScroll:true}),350)};
+  box.append(b)}
 
 /* sheet */
 function setKind(k,keepCat){kind=k;document.querySelectorAll("[data-k]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===k));
@@ -781,6 +880,7 @@ function drawSheet(){
     const x=document.createElement("button");x.type="button";x.className="mini del";x.textContent="刪";x.setAttribute("aria-label","刪除呢筆");
     x.onclick=ev=>{ev.stopPropagation();if(x.dataset.arm){delEntry(e.id)}else{x.dataset.arm=1;x.textContent="確定？";setTimeout(()=>{if(x.isConnected){delete x.dataset.arm;x.textContent="刪"}},2500)}};
     r.append(x);box.append(r)});
+  renderShPlans();
   const zw=$("zeroWrap");zw.replaceChildren();
   if(!es.some(e=>e.kind!=="in")){const b=document.createElement("button");b.type="button";b.className="btn ghost";b.style.width="100%";
     const on=!!days[sel]?.zero;b.textContent=on?"取消零消費標記":"0！標記呢日零消費";b.onclick=()=>setZero(sel,!on);zw.append(b)}
@@ -988,7 +1088,7 @@ const KK_KEY="kk-local-data";
 let store;
 function loadStore(){
   let s=null;try{s=JSON.parse(localStorage.getItem(KK_KEY)||"null")}catch(e){}
-  s=s&&typeof s==="object"?s:{};["entries","days","cycles","settings"].forEach(k=>{if(!s[k]||typeof s[k]!=="object")s[k]={}});
+  s=s&&typeof s==="object"?s:{};["entries","days","cycles","settings","plans"].forEach(k=>{if(!s[k]||typeof s[k]!=="object")s[k]={}});
   return s;
 }
 store=loadStore();
@@ -1010,7 +1110,7 @@ const localDoc=p=>{const [c,id]=p.split("/");return{
 db={collection:localCol,doc:localDoc};
 
 $("exOff").onclick=()=>{
-  const payload={app:"kakeibo-backup",exportedAt:new Date().toISOString(),entries:store.entries,days:store.days,cycles:store.cycles,settings:store.settings};
+  const payload={app:"kakeibo-backup",exportedAt:new Date().toISOString(),entries:store.entries,days:store.days,cycles:store.cycles,settings:store.settings,plans:store.plans};
   const a=document.createElement("a");
   a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}));
   a.download=`家計簿備份_${todayStr()}.json`;document.body.append(a);a.click();
@@ -1021,7 +1121,7 @@ $("imIn").onchange=async e=>{
   let j;try{j=JSON.parse(await f.text())}catch(err){toast("唔係有效嘅備份檔");return}
   if(!j||typeof j.entries!=="object"||Array.isArray(j.entries)){toast("備份格式唔啱");return}
   if(!confirm("匯入會取代呢個瀏覽器入面所有嘅數，確定？"))return;
-  store={entries:j.entries||{},days:j.days||{},cycles:j.cycles||{},settings:j.settings||{}};
+  store={entries:j.entries||{},days:j.days||{},cycles:j.cycles||{},settings:j.settings||{},plans:j.plans||{}};
   saveStore();location.reload();
 };
 
@@ -1062,7 +1162,7 @@ async function ghUpload(auto){
       else if(g.ok){throw new Error("GitHub 已有備份，請先撳「⬇️ 還原」，以免覆蓋")}
       else throw new Error(ghErr(g.status));
     }
-    const payload=JSON.stringify({app:"kakeibo-backup",exportedAt:new Date().toISOString(),entries:store.entries,days:store.days,cycles:store.cycles,settings:store.settings},null,2);
+    const payload=JSON.stringify({app:"kakeibo-backup",exportedAt:new Date().toISOString(),entries:store.entries,days:store.days,cycles:store.cycles,settings:store.settings,plans:store.plans},null,2);
     const body={message:"backup "+new Date().toISOString().slice(0,16).replace("T"," "),content:b64enc(payload)};
     if(c.sha)body.sha=c.sha;
     const p=await fetch(ghURL(c),{method:"PUT",headers:{...ghHead(c),"Content-Type":"application/json"},body:JSON.stringify(body)});
@@ -1090,7 +1190,7 @@ async function ghRestore(){
     const data=JSON.parse(b64dec(j.content));
     if(!data||typeof data.entries!=="object"||Array.isArray(data.entries))throw new Error("GitHub 上面嘅檔案格式唔啱");
     ghSet({...ghCfg(),sha:j.sha,last:new Date().toISOString()});
-    store={entries:data.entries||{},days:data.days||{},cycles:data.cycles||{},settings:data.settings||{}};
+    store={entries:data.entries||{},days:data.days||{},cycles:data.cycles||{},settings:data.settings||{},plans:data.plans||{}};
     restoring=true;saveStore();location.reload();
   }catch(e){setGhStatus("❌ "+e.message);toast(e.message)}
 }
@@ -1117,6 +1217,7 @@ loadGhForm();
   db.collection("entries").onSnapshot(s=>{entries=s.docs.map(d=>({...d.data(),id:d.id})).filter(e=>e.date&&e.amt>0);render();drawSheet()});
   db.collection("days").onSnapshot(s=>{days=Object.fromEntries(s.docs.map(d=>[d.id,d.data()]));render();drawSheet()});
   db.collection("cycles").onSnapshot(s=>{cycles=Object.fromEntries(s.docs.map(d=>[d.id,d.data()]));render()});
+  db.collection("plans").onSnapshot(s=>{plans=s.docs.map(d=>({...d.data(),id:d.id}));render();drawSheet()});
   db.doc("settings/main").onSnapshot(s=>{if(s.exists)settings={...settings,...s.data()};applyTags();fillSettings();render();if(sel)drawChips()});
 })();
 </script>
