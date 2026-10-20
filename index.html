@@ -208,6 +208,18 @@ input.f:focus{border-color:var(--ink);outline:none}
 .ghbox{border:2px dashed var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
 .ghbox label{display:flex;flex-direction:column;gap:4px;font-size:.82rem;color:var(--soft)}
 .ghbox label.ghchk{flex-direction:row;align-items:center;gap:8px;color:var(--ink)}
+.ghmodal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:95;display:flex;align-items:center;justify-content:center;padding:16px}
+.ghmodal[hidden]{display:none!important}
+.ghdlg{background:var(--sheet);color:var(--ink);border:2px solid var(--ink);border-radius:18px;padding:16px;width:min(560px,100%);max-height:88vh;display:flex;flex-direction:column;gap:10px;box-shadow:4px 4px 0 var(--shadow)}
+.ghdlg h3{margin:0;font-size:1.05rem}
+.ghsub{font-size:.85rem;opacity:.8}
+.ghlist{overflow:auto;max-height:50vh;border:1px dashed var(--ink);border-radius:10px;padding:8px 10px;font-size:.85rem;display:flex;flex-direction:column;gap:4px;word-break:break-all}
+.ghcol{font-weight:900;margin-top:6px}
+.ghadd{color:var(--sat)}
+.ghold{opacity:.6}
+.ghdel{color:var(--sun)}
+.ghnote{font-size:.8rem;opacity:.8}
+.ghact{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .ghbox input.f{width:100%}
 #cycleCard .big{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:4px 12px}
 #cycleCard .big>div:first-child{min-width:0}
@@ -1292,22 +1304,96 @@ function scheduleAuto(){
   syncTimer=setTimeout(()=>ghUpload(true),15000);
   setGhStatus("⏳ 15 秒後自動上傳…");
 }
+const GH_COLS=[["entries","記帳"],["days","零用日"],["cycles","出糧期"],["plans","記事"],["plancfg","記事 tag"],["settings","設定"]];
+const ghLabel=(col,k,v)=>{
+  if(col==="settings"||col==="plancfg")return `${k} = ${String(JSON.stringify(v)).slice(0,60)}`;
+  if(!v||typeof v!=="object")return String(k);
+  if(col==="entries")return `${v.date||""} $${v.amt??""} ${v.note||""}`.trim();
+  if(col==="plans")return `${v.date||""} ${v.title||""}`.trim();
+  if(col==="days")return `${k}${v.zero?"（零用）":""}`;
+  return String(k);
+};
+const stableStr=v=>{
+  if(Array.isArray(v))return "["+v.map(stableStr).join(",")+"]";
+  if(v&&typeof v==="object")return "{"+Object.keys(v).sort().map(k=>JSON.stringify(k)+":"+stableStr(v[k])).join(",")+"}";
+  return JSON.stringify(v===undefined?null:v);
+};
+const ghUnwrap=(col,v)=>{
+  if((col==="settings"||col==="plancfg")&&v&&typeof v==="object"&&!Array.isArray(v)&&Object.keys(v).length===1&&v.main&&typeof v.main==="object")return v.main;
+  return v&&typeof v==="object"?v:{};
+};
+/* 比較本機同 GitHub 版本：新增（本機有）、改動、刪走（GitHub 有、本機冇） */
+function ghDiff(remote,local){
+  const out={cols:[],total:0};
+  GH_COLS.forEach(([col,name])=>{
+    const L=ghUnwrap(col,local[col]),R=ghUnwrap(col,remote[col]);
+    const d={col,name,add:[],chg:[],del:[]};
+    new Set([...Object.keys(L),...Object.keys(R)]).forEach(k=>{
+      const inL=Object.prototype.hasOwnProperty.call(L,k),inR=Object.prototype.hasOwnProperty.call(R,k);
+      if(inL&&!inR)d.add.push({k,now:L[k]});
+      else if(!inL&&inR)d.del.push({k,old:R[k]});
+      else if(stableStr(L[k])!==stableStr(R[k]))d.chg.push({k,now:L[k],old:R[k]});
+    });
+    if(d.add.length||d.chg.length||d.del.length){out.cols.push(d);out.total+=d.add.length+d.chg.length+d.del.length}
+  });
+  return out;
+}
+async function ghFetchRemote(c){
+  const r=await fetch(ghURL(c),{headers:ghHead(c)});
+  if(r.status===404)return null;
+  if(!r.ok)throw new Error(ghErr(r.status));
+  const j=await r.json();
+  let data={};
+  try{const p=JSON.parse(b64dec(j.content));if(p&&typeof p==="object")data=p}catch(e){}
+  return {sha:j.sha,data};
+}
+/* 覆寫前彈窗列出改動；回傳 true=確定覆寫，false=取消 */
+function askOverwrite(diff,remote){
+  const box=$("ghDiff"),body=$("ghDiffBody");
+  const mk=(t,cls)=>{const e=document.createElement("div");if(cls)e.className=cls;e.textContent=t;return e};
+  body.textContent="";
+  body.appendChild(mk(`GitHub 版本時間：${remote.data.exportedAt||"未知"}　·　共 ${diff.total} 項唔同`,"ghsub"));
+  const list=document.createElement("div");list.className="ghlist";
+  diff.cols.forEach(d=>{
+    list.appendChild(mk(`【${d.name}】➕${d.add.length}　✏️${d.chg.length}　➖${d.del.length}`,"ghcol"));
+    d.add.forEach(x=>list.appendChild(mk(`➕ 本機新增：${ghLabel(d.col,x.k,x.now)}`,"ghadd")));
+    d.chg.forEach(x=>{
+      list.appendChild(mk(`✏️ 本機改成：${ghLabel(d.col,x.k,x.now)}`));
+      list.appendChild(mk(`　　GitHub 版本：${ghLabel(d.col,x.k,x.old)}`,"ghold"));
+    });
+    d.del.forEach(x=>list.appendChild(mk(`➖ GitHub 有、本機冇：${ghLabel(d.col,x.k,x.old)}（覆寫後會刪走）`,"ghdel")));
+  });
+  body.appendChild(list);
+  body.appendChild(mk("確定覆寫會以本機數據取代 GitHub 上面嘅檔案。唔想覆寫就撳取消，或者改用 GitHub 版本。","ghnote"));
+  return new Promise(res=>{
+    const ok=$("ghDiffOk"),no=$("ghDiffNo"),rs=$("ghDiffRestore");
+    const done=v=>{box.hidden=true;ok.onclick=no.onclick=rs.onclick=box.onclick=null;res(v)};
+    ok.onclick=()=>done(true);
+    no.onclick=()=>done(false);
+    rs.onclick=()=>{done(false);ghRestore()};
+    box.onclick=e=>{if(e.target===box)done(false)};
+    box.hidden=false;
+  });
+}
 async function ghUpload(auto){
   const c=ghCfg();
   if(!c.repo||!c.token||!c.path){if(!auto)toast("先填好上面嘅設定");return false}
   if(syncing)return false;
   syncing=true;setGhStatus("⬆️ 上傳中…");
   try{
-    /* 未知道 GitHub 上面嘅版本（新裝機 / 未還原過）→ 唔可以直接覆蓋，要先還原 */
-    if(c.sha===undefined){
-      const g=await fetch(ghURL(c),{headers:ghHead(c)});
-      if(g.status===404){c.sha=null}
-      else if(g.ok){throw new Error("GitHub 已有備份，請先撳「⬇️ 還原」，以免覆蓋")}
-      else throw new Error(ghErr(g.status));
+    /* GitHub 版本唔係我哋上次同步嗰個（或者未知）→ 先睇差異，有改動就要你確認 */
+    const remote=await ghFetchRemote(c);
+    if(remote&&remote.sha!==c.sha){
+      const diff=ghDiff(remote.data,store);
+      if(diff.total>0){
+        if(auto){setGhStatus("⚠️ GitHub 有改動，未有自動覆寫；撳「⬆️ 上傳」睇差異");return false}
+        const ok=await askOverwrite(diff,remote);
+        if(!ok){setGhStatus("已取消，GitHub 未有改動");return false}
+      }
     }
     const payload=JSON.stringify({app:"kakeibo-backup",exportedAt:new Date().toISOString(),entries:store.entries,days:store.days,cycles:store.cycles,settings:store.settings,plans:store.plans,plancfg:store.plancfg},null,2);
     const body={message:"backup "+new Date().toISOString().slice(0,16).replace("T"," "),content:b64enc(payload)};
-    if(c.sha)body.sha=c.sha;
+    if(remote)body.sha=remote.sha;
     const p=await fetch(ghURL(c),{method:"PUT",headers:{...ghHead(c),"Content-Type":"application/json"},body:JSON.stringify(body)});
     if(!p.ok)throw new Error(ghErr(p.status));
     const j=await p.json();
@@ -1365,5 +1451,16 @@ loadGhForm();
   db.doc("settings/main").onSnapshot(s=>{if(s.exists)settings={...settings,...s.data()};applyTags();fillSettings();render();if(sel)drawChips()});
 })();
 </script>
+<div class="ghmodal" id="ghDiff" hidden>
+  <div class="ghdlg" role="dialog" aria-modal="true">
+    <h3>⚠️ GitHub 有較新改動</h3>
+    <div id="ghDiffBody"></div>
+    <div class="ghact">
+      <button class="btn ghost" id="ghDiffRestore" type="button">⬇️ 改用 GitHub 版本</button>
+      <button class="btn ghost" id="ghDiffNo" type="button">取消</button>
+      <button class="btn" id="ghDiffOk" type="button">⬆️ 確定覆寫</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
