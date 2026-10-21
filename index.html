@@ -127,6 +127,8 @@ input.f:focus{border-color:var(--ink);outline:none}
 .day.adj{opacity:.42;border-style:dashed;box-shadow:none}
 .day.hol{background:color-mix(in srgb,var(--sun) 12%,var(--sheet))}
 .day.hol .d{color:var(--sun)}
+.holtag{color:var(--sun);font-weight:900}
+.dh .holtag{color:var(--sun);font-weight:900}
 .day .hn{font-size:.52rem;line-height:1.15;color:var(--sun);font-weight:900;max-width:100%;text-align:center;word-break:break-all;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .hols{display:flex;flex-direction:column;gap:4px;font-size:.82rem}
 .hols div{display:flex;gap:8px}
@@ -785,7 +787,7 @@ function renderList(mm){
   const by={};mm.forEach(e=>(by[e.date]=by[e.date]||[]).push(e));
   Object.keys(by).sort().reverse().forEach(k=>{
     const [y,m,d]=k.split("-").map(Number),h=document.createElement("div");h.className="dh";
-    const l=document.createElement("span");l.textContent=`${m}月${d}日（${WD[new Date(y,m-1,d).getDay()]}）${HOL[k]?" 🎌"+HOL[k]:""}`;
+    const l=document.createElement("span");l.textContent=`${m}月${d}日（${WD[new Date(y,m-1,d).getDay()]}）`;if(HOL[k]){const hv=document.createElement("span");hv.className="holtag";hv.textContent=" 🏖️ "+HOL[k];l.append(hv)}
     const t=by[k].filter(e=>e.kind!=="in").reduce((s,e)=>s+e.amt,0),r=document.createElement("span");r.className="num";r.textContent=t?"−"+money(t):"";
     h.append(l,r);box.append(h);
     by[k].sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(e=>box.append(entryRow(e,()=>{openSheet(k);startEdit(e)})));
