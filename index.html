@@ -215,6 +215,7 @@ input.f:focus{border-color:var(--ink);outline:none}
 .ghmodal[hidden]{display:none!important}
 .ghdlg{background:var(--sheet);color:var(--ink);border:2px solid var(--ink);border-radius:18px;padding:16px;width:min(560px,100%);max-height:88vh;display:flex;flex-direction:column;gap:10px;box-shadow:4px 4px 0 var(--shadow)}
 .ghdlg h3{margin:0;font-size:1.05rem}
+.fx .subedit{font-size:.8rem;padding:4px 10px}
 .ghsub{font-size:.85rem;opacity:.8}
 .ghlist{overflow:auto;max-height:50vh;border:1px dashed var(--ink);border-radius:10px;padding:8px 10px;font-size:.85rem;display:flex;flex-direction:column;gap:4px;word-break:break-all}
 .ghcol{font-weight:900;margin-top:6px}
@@ -822,7 +823,7 @@ function fxRow(p,o){
   lock.textContent=p.locked?"🔒":"🔓";lock.setAttribute("aria-label",p.locked?"解鎖再改":"鎖住金額");
   lock.onclick=()=>o.save({locked:!p.locked});
   if(p.locked||HIDE){
-    const nm=document.createElement("div");nm.className="nm";nm.textContent=p.name;const sm=document.createElement("small");sm.textContent=c.n+(o.sub?" ・ "+o.sub:"");nm.append(sm);
+    const nm=document.createElement("div");nm.className="nm";nm.textContent=p.name;const sm=document.createElement("small");sm.textContent=p.sub||c.n;nm.append(sm);
     const a=document.createElement("div");a.className="amtc";a.append(money(p.amt)+" ",lock);
     r.append(ic,nm,a);
   }else{
@@ -838,12 +839,22 @@ function fxRow(p,o){
     r.append(ic,ed,a);
   }
   const acts=document.createElement("div");acts.className="acts";
+  if(!p.locked&&!HIDE){const sb=document.createElement("button");sb.type="button";sb.className="mini subedit";sb.textContent="✏️ 副標題："+(p.sub||c.n);sb.setAttribute("aria-label","修改副標題");sb.onclick=()=>openSubDlg(p.sub||"",v=>o.save({sub:v}));acts.append(sb)}
   if(o.move)[["▲",-1,o.first,"上移"],["▼",1,o.last,"下移"]].forEach(([t,d,dis,l])=>{const b=document.createElement("button");b.type="button";b.className="mini";b.textContent=t;b.disabled=dis;b.setAttribute("aria-label",`${p.name} ${l}`);b.onclick=()=>o.move(d);acts.append(b)});
   (o.acts||[]).forEach(([t,fn])=>{const b=document.createElement("button");b.type="button";b.className="mini acc";b.textContent=t;b.onclick=fn;acts.append(b)});
   if(!p.locked&&o.del){const d=document.createElement("button");d.type="button";d.className="mini del";d.textContent="刪";
     d.onclick=()=>{if(d.dataset.arm)o.del();else{d.dataset.arm=1;d.textContent="確定？";setTimeout(()=>{if(d.isConnected){delete d.dataset.arm;d.textContent="刪"}},2500)}};acts.append(d)}
   if(acts.children.length)r.append(acts);
   return r;
+}
+function openSubDlg(cur,onSave){
+  const d=$("subDlg"),i=$("subInp"),ok=$("subOk"),no=$("subNo");
+  i.value=cur;d.hidden=false;setTimeout(()=>i.focus(),50);
+  const done=()=>{d.hidden=true;ok.onclick=no.onclick=d.onclick=i.onkeydown=null};
+  no.onclick=done;
+  d.onclick=e=>{if(e.target===d)done()};
+  i.onkeydown=e=>{if(e.key==="Enter")ok.click()};
+  ok.onclick=()=>{const v=i.value.trim().slice(0,30);done();onSave(v)};
 }
 const presets=()=>Array.isArray(settings.presets)?settings.presets:[];
 async function setPresets(list){if(!need())return;try{await db.doc("settings/main").set({...settings,presets:list})}catch(e){toast("儲唔到")}}
@@ -1462,6 +1473,17 @@ loadGhForm();
       <button class="btn ghost" id="ghDiffRestore" type="button">⬇️ 改用 GitHub 版本</button>
       <button class="btn ghost" id="ghDiffNo" type="button">取消</button>
       <button class="btn" id="ghDiffOk" type="button">⬆️ 確定覆寫</button>
+    </div>
+  </div>
+</div>
+<div class="ghmodal" id="subDlg" hidden>
+  <div class="ghdlg" role="dialog" aria-modal="true">
+    <h3>✏️ 修改副標題</h3>
+    <div class="ghsub">副標題會顯示喺名稱下面；留空就顯示類別名。</div>
+    <input class="f" id="subInp" placeholder="例：八達通／交通" aria-label="副標題" maxlength="30">
+    <div class="ghact">
+      <button class="btn ghost" id="subNo" type="button">取消</button>
+      <button class="btn" id="subOk" type="button">💾 儲存</button>
     </div>
   </div>
 </div>
