@@ -134,6 +134,7 @@ input.f:focus{border-color:var(--ink);outline:none}
 .hols div{display:flex;gap:8px}
 .hols b{font-family:var(--f-num);color:var(--sun);min-width:4.2em}
 .hols .adjh{opacity:.55}
+.hols span{color:var(--sun);font-weight:700}
 .dl{display:flex;flex-direction:column}
 .dl .dh{font-size:.78rem;font-weight:900;color:var(--soft);padding:8px 2px 2px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
 .ent.tap{cursor:pointer}
@@ -761,7 +762,7 @@ function renderCal(){
   const pm=m===1?[y-1,12]:[y,m-1],nm=m===12?[y+1,1]:[y,m+1];
   const keys=[pm,[y,m],nm].map(([yy,mmm])=>`${yy}-${pad(mmm)}-`);
   const list=Object.keys(HOL).filter(k=>keys.some(p=>k.startsWith(p))).sort();
-  const h=document.createElement("div");h.style.fontWeight="900";h.textContent="🎌 公眾假期（上月・本月・下月）";hb.append(h);
+  const h=document.createElement("div");h.style.fontWeight="900";h.textContent="🏖️ 公眾假期（上月・本月・下月）";hb.append(h);
   if(!list.length){const p=document.createElement("div");p.className="hint";
     p.textContent=`${y}-${pad(m)}`>=HOL_UNTIL?"政府未公佈呢段時間嘅假期":"呢三個月冇公眾假期 (´;ω;`)";hb.append(p)}
   list.forEach(k=>{const [yy,mmm,dd]=k.split("-").map(Number),r=document.createElement("div");
@@ -934,12 +935,12 @@ function renderNCal(){
   /* 本月記錄 */
   const box=$("nList");box.replaceChildren();
   if(!mm.length){const e=document.createElement("div");e.className="empty";e.textContent="呢個月未有記錄 (´,,•ω•,,)";box.append(e)}
-  let last="";mm.forEach(p=>{if(p.date!==last){last=p.date;const h=document.createElement("div");h.className="ndate";h.textContent=mdw(p.date)+(HOL[p.date]?" 🎌"+HOL[p.date]:"");box.append(h)}box.append(nRow(p,{del:true}))});
+  let last="";mm.forEach(p=>{if(p.date!==last){last=p.date;const h=document.createElement("div");h.className="ndate";h.textContent=mdw(p.date);if(HOL[p.date]){const hv=document.createElement("span");hv.className="holtag";hv.textContent=" 🏖️ "+HOL[p.date];h.append(hv)}box.append(h)}box.append(nRow(p,{del:true}))});
   /* 假期（上月・本月・下月） */
   const hb=$("nhols");hb.replaceChildren();
   const pm=m===1?[y-1,12]:[y,m-1],nm=m===12?[y+1,1]:[y,m+1],keys=[pm,[y,m],nm].map(([a,b])=>`${a}-${pad(b)}-`);
   const list=Object.keys(HOL).filter(k=>keys.some(p=>k.startsWith(p))).sort();
-  const h=document.createElement("div");h.style.fontWeight="900";h.textContent="🎌 公眾假期（上月・本月・下月）";hb.append(h);
+  const h=document.createElement("div");h.style.fontWeight="900";h.textContent="🏖️ 公眾假期（上月・本月・下月）";hb.append(h);
   if(!list.length){const p=document.createElement("div");p.className="hint";p.textContent=`${y}-${pad(m)}`>=HOL_UNTIL?"政府未公佈呢段時間嘅假期":"呢三個月冇公眾假期 (´;ω;`)";hb.append(p)}
   list.forEach(k=>{const r=document.createElement("div");if(!k.startsWith(keys[1]))r.classList.add("adjh");if(k<todayStr()){r.classList.add("past");r.title="已過"}
     const b=document.createElement("b");b.textContent=mdw(k).replace("（","（");const s=document.createElement("span");s.textContent=HOL[k];r.append(b,s);hb.append(r)})}
@@ -990,7 +991,7 @@ function startNEdit(p){nedit=p.id;ntagSel=p.tag;$("nTitle").value=p.title||"";$(
 function openNSheet(key,p){nsel=key;resetNForm();if(p)startNEdit(p);else drawNSheet();$("nscrim").hidden=false;$("nsheet").hidden=false;setTimeout(()=>$("nTitle").focus({preventScroll:true}),50)}
 function closeNSheet(){$("nscrim").hidden=true;$("nsheet").hidden=true;nsel=null;nedit=null}
 function drawNSheet(){if(!nsel)return;const [y,m,d]=nsel.split("-").map(Number);
-  $("nshTitle").textContent=`${m}月${d}日（${WD[new Date(y,m-1,d).getDay()]}）${HOL[nsel]?" 🎌"+HOL[nsel]:""}`;
+  $("nshTitle").textContent=`${m}月${d}日（${WD[new Date(y,m-1,d).getDay()]}）`;if(HOL[nsel]){const hv=document.createElement("span");hv.className="holtag";hv.textContent=" 🏖️ "+HOL[nsel];$("nshTitle").append(hv)}
   const ps=plans.filter(p=>p.date===nsel).sort(nByTime),box=$("nshList");box.replaceChildren();
   if(!ps.length){const e=document.createElement("div");e.className="empty";e.textContent="呢日未有記錄";box.append(e)}
   ps.forEach(p=>box.append(nRow(p,{del:true})));drawNChips();
@@ -1027,7 +1028,7 @@ function openSheet(key){sel=key;resetForm();{const L=kind==="in"?INCATS:CATS;if(
 function closeSheet(){$("scrim").hidden=true;$("sheet").hidden=true;sel=null;editId=null}
 function drawSheet(){
   if(!sel)return;const [y,m,d]=sel.split("-").map(Number);
-  $("shTitle").textContent=`${m}月${d}日（${WD[new Date(y,m-1,d).getDay()]}）${HOL[sel]?" 🎌"+HOL[sel]:""}`;
+  $("shTitle").textContent=`${m}月${d}日（${WD[new Date(y,m-1,d).getDay()]}）`;if(HOL[sel]){const hv=document.createElement("span");hv.className="holtag";hv.textContent=" 🏖️ "+HOL[sel];$("shTitle").append(hv)}
   const es=entries.filter(e=>e.date===sel).sort((a,b)=>(a.ts||0)-(b.ts||0)),box=$("shList");box.replaceChildren();
   if(!es.length){const p=document.createElement("div");p.className="empty";p.textContent=days[sel]?.zero?"今日零消費 0！叻！":"呢日未有紀錄";box.append(p)}
   es.forEach(e=>{const r=entryRow(e,()=>startEdit(e));
