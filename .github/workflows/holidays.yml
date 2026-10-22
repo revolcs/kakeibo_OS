@@ -17,8 +17,9 @@ jobs:
 
       - name: 下載 1823 公眾假期
         run: |
-          curl -fsSL --retry 3 -o hk-holidays.json "https://www.1823.gov.hk/common/ical/tc.json"
-          python3 -c "import json; json.load(open('hk-holidays.json', encoding='utf-8'))"
+          curl -fsSL --retry 3 -A "Mozilla/5.0 (compatible; kakeibo-holidays)" -o hk-holidays.json -w "HTTP %{http_code}, %{size_download} bytes\n" "https://www.1823.gov.hk/common/ical/tc.json"
+          head -c 300 hk-holidays.json; echo
+          python3 -c "import json; json.load(open('hk-holidays.json', encoding='utf-8-sig')); print('JSON OK')"
 
       - name: 有改動就提交
         run: |
