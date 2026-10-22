@@ -168,6 +168,7 @@ input.f:focus{border-color:var(--ink);outline:none}
 .incsum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:4px}
 .incsum div{background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:6px 8px;min-width:0;font-size:.74rem;color:var(--soft)}
 .incsum b{display:block;font-family:var(--f-num);font-size:.92rem;color:var(--ink);overflow-wrap:anywhere}
+.lbledit{font:inherit;font-size:.7rem;border:none;background:none;padding:0 2px;margin-left:2px;cursor:pointer;line-height:1}
 .incsum .ih{display:block;font-size:.64rem;line-height:1.3;color:var(--soft);margin-top:2px}
 .empty{font-size:.85rem;color:var(--soft);text-align:center;padding:10px}
 
@@ -352,7 +353,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   </section>
 
   <section class="card" aria-labelledby="catH">
-    <h2 id="catH" class="foldh">🍰 本月錢去咗邊<button class="foldbtn" type="button" aria-expanded="true" aria-label="收起或者打開本月錢去咗邊">▾</button></h2>
+    <h2 id="catH" class="foldh"><span id="catTitle">🍰 本月錢去咗邊</span><button class="foldbtn" type="button" aria-expanded="true" aria-label="收起或者打開本月錢去咗邊">▾</button></h2>
     <div class="cats" id="cats"></div>
   </section>
 
@@ -859,12 +860,24 @@ function renderList(mm){
   });
 }
 
+const SUM_DEF={title:"本月錢去咗邊",pay:"人工",inother:"其他收入",all:"全收入"};
+const SUM_HINT={title:"顯示喺本月錢去咗邊嘅標題，留空就用原名",pay:"收入格顯示嘅名稱，留空就用原名",inother:"收入格顯示嘅名稱，留空就用原名",all:"收入格顯示嘅名稱，留空就用原名"};
+const sumLab=k=>(settings.sumLabels&&settings.sumLabels[k])||SUM_DEF[k];
+function sumEditBtn(k){const b=document.createElement("button");b.type="button";b.className="lbledit";b.textContent="✏️";b.setAttribute("aria-label","改名："+sumLab(k));
+  b.onclick=e=>{e.stopPropagation();openSubDlg((settings.sumLabels&&settings.sumLabels[k])||"",v=>setSumLabel(k,v),"✏️ 改名",SUM_HINT[k])};return b}
+function renderCatTitle(){const t=$("catTitle");if(!t)return;t.replaceChildren(document.createTextNode("🍰 "+sumLab("title")),sumEditBtn("title"))}
+async function setSumLabel(k,v){
+  if(typeof need==="function"&&!need())return;
+  const m={...(settings.sumLabels||{})};if(v)m[k]=v;else delete m[k];
+  try{await db.doc("settings/main").set({...settings,sumLabels:m});toast(v?"已改名 ✏️":"已還原原名")}catch(e){toast("儲唔到")}
+}
 function renderCats(mm){
   const box=$("cats");box.replaceChildren();
   /* 本月收入：人工 ＋ 其他收入 ＝ 全收入 */
   const ins=mm.filter(e=>e.kind==="in"),ip=ins.filter(e=>e.cat==="pay").reduce((s,e)=>s+e.amt,0),all=ins.reduce((s,e)=>s+e.amt,0),io=Math.round((all-ip)*100)/100;
   const sm=document.createElement("div");sm.className="incsum";
-  [["💼 人工",ip,ip?"按曆月計，出糧日記入當月":"本月未有人工；按曆月計，出糧日記入當月就會顯示"],["🎁 其他收入",io],["💰 全收入",Math.round((ip+io)*100)/100]].forEach(([l,v,h])=>{const d=document.createElement("div");const s=document.createElement("span");s.textContent=l;const b=document.createElement("b");b.textContent=money(v);d.append(s,b);if(h){const t=document.createElement("small");t.className="ih";t.textContent=h;d.append(t)}sm.append(d)});
+  [["pay","💼",ip,ip?"按曆月計，出糧日記入當月":"本月未有人工；按曆月計，出糧日記入當月就會顯示"],["inother","🎁",io],["all","💰",Math.round((ip+io)*100)/100]].forEach(([k,em,v,h])=>{const d=document.createElement("div");const s=document.createElement("span");s.textContent=em+" "+sumLab(k);s.append(sumEditBtn(k));const b=document.createElement("b");b.textContent=money(v);d.append(s,b);if(h){const t=document.createElement("small");t.className="ih";t.textContent=h;d.append(t)}sm.append(d)});
+  renderCatTitle();
   box.append(sm);
   const tot={};mm.filter(e=>e.kind!=="in").forEach(e=>tot[e.cat]=(tot[e.cat]||0)+e.amt);
   const rows=CATS_ALL.filter(c=>tot[c.k]).sort((a,b)=>tot[b.k]-tot[a.k]);
@@ -910,8 +923,9 @@ function fxRow(p,o){
   if(acts.children.length)r.append(acts);
   return r;
 }
-function openSubDlg(cur,onSave){
+function openSubDlg(cur,onSave,title,hint){
   const d=$("subDlg"),i=$("subInp"),ok=$("subOk"),no=$("subNo");
+  $("subH").textContent=title||"✏️ 修改副標題";$("subHint").textContent=hint||"副標題會顯示喺名稱下面；留空就顯示類別名。";
   i.value=cur;d.hidden=false;setTimeout(()=>i.focus(),50);
   const done=()=>{d.hidden=true;ok.onclick=no.onclick=d.onclick=i.onkeydown=null};
   no.onclick=done;
@@ -1560,8 +1574,8 @@ holFetch(false);
 </div>
 <div class="ghmodal" id="subDlg" hidden>
   <div class="ghdlg" role="dialog" aria-modal="true">
-    <h3>✏️ 修改副標題</h3>
-    <div class="ghsub">副標題會顯示喺名稱下面；留空就顯示類別名。</div>
+    <h3 id="subH">✏️ 修改副標題</h3>
+    <div class="ghsub" id="subHint">副標題會顯示喺名稱下面；留空就顯示類別名。</div>
     <input class="f" id="subInp" placeholder="例：八達通／交通" aria-label="副標題" maxlength="30">
     <div class="ghact">
       <button class="btn ghost" id="subNo" type="button">取消</button>
