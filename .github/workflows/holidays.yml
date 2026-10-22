@@ -1,0 +1,33 @@
+name: 更新香港公眾假期
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 取得 repo
+        uses: actions/checkout@v4
+
+      - name: 下載 1823 公眾假期
+        run: |
+          curl -fsSL --retry 3 -o hk-holidays.json "https://www.1823.gov.hk/common/ical/tc.json"
+          python3 -c "import json; json.load(open('hk-holidays.json', encoding='utf-8'))"
+
+      - name: 有改動就提交
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add hk-holidays.json
+          if git diff --cached --quiet; then
+            echo "假期冇改動"
+          else
+            git commit -m "更新香港公眾假期"
+            git push
+          fi

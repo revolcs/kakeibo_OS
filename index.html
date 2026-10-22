@@ -608,8 +608,8 @@ const HOL={
 "2027-03-26":"耶穌受難節","2027-03-27":"受難節翌日","2027-03-29":"復活節星期一","2027-04-05":"清明節",
 "2027-05-01":"勞動節","2027-05-13":"佛誕","2027-06-09":"端午節","2027-07-01":"回歸紀念日"};
 const HOL_UNTIL="2027-07";
-/* 🔄 自動抓取香港公眾假期（1823 政府公開資料）；抓唔到就用內置資料；只加入未有嘅日期，內置短名保留 */
-const HOL_SRC="https://www.1823.gov.hk/common/ical/tc.json",HOL_CACHE="kk-hol-cache";
+/* 🔄 香港公眾假期：GitHub Actions 每日由 1823 政府公開資料存入 repo，網頁讀取（避開瀏覽器跨網站限制）；抓唔到就用內置資料；只加入未有嘅日期，內置短名保留 */
+const HOL_SRC="https://raw.githubusercontent.com/revolcs/kakeibo_OS/main/hk-holidays.json",HOL_CACHE="kk-hol-cache";
 const holMeta=()=>{try{return JSON.parse(localStorage.getItem(HOL_CACHE)||"null")||{}}catch(e){return{}}};
 function holApply(items){Object.keys(items||{}).forEach(k=>{if(!HOL[k])HOL[k]=items[k]})}
 function holParse(root){
