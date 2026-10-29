@@ -1187,7 +1187,12 @@ async function setSaved(obj){if(!need())return;
   try{await db.doc("settings/main").set({...settings,saved:obj});toast(obj.locked?"已鎖 🔒":"已存金額更新 🐷")}catch(e){toast("儲唔到")}}
 async function togglePayday(key,on){if(!need())return;
   const list=markedPays().filter(d=>d!==key);if(on)list.push(key);list.sort();
-  try{await db.doc("settings/main").set({...settings,paydays:list});toast(on?"已設為出糧日 💰":"已取消出糧日")}catch(e){toast("儲唔到")}}
+  try{await db.doc("settings/main").set({...settings,paydays:list});toast(on?"已設為出糧日 💰":"已取消出糧日")}catch(e){toast("儲唔到")}
+  /* 設為出糧日時，如果呢日未有人工，就自動加上上一次嘅人工金額（之後可以再改） */
+  if(on&&!entries.some(e=>e.cat==="pay"&&e.date===key)){
+    const prev=entries.filter(e=>e.cat==="pay"&&e.date<key).sort((a,b)=>a.date<b.date?1:-1)[0];
+    if(prev)await setSalary(key,String(prev.amt));
+  }}
 $("shClose").onclick=closeSheet;$("scrim").onclick=closeSheet;
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("sheet").hidden)closeSheet()});
 $("eDate").onchange=()=>{if($("eDate").value&&!editId){sel=$("eDate").value;drawSheet()}};
