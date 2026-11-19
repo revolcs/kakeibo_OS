@@ -226,6 +226,17 @@ input.f:focus{border-color:var(--ink);outline:none}
 .ghdel{color:var(--sun)}
 .ghnote{font-size:.8rem;opacity:.8}
 .ghact{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+/* 💳 信用卡簽賬 */
+.ccsums{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.ccsum{background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.ccsum small{color:var(--soft);font-size:.72rem}
+.ccrow{display:flex;justify-content:space-between;gap:8px;font-size:.82rem}
+.ccrow b{font-family:var(--f-num);white-space:nowrap}
+.ccact{display:flex;justify-content:flex-end;padding:4px 0}
+.ent.ccpaid{opacity:.55}
+.ccpaylist{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto}
+.ccpaylist label{display:flex;gap:8px;align-items:center;font-size:.9rem;border:1.5px solid var(--line);border-radius:10px;padding:8px;cursor:pointer}
+.tagrow input.ccut{width:3.6em;flex:0 0 3.6em;text-align:center;font-family:var(--f-num)}
 .ghbox input.f{width:100%}
 #cycleCard .big{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:4px 12px}
 #cycleCard .big>div:first-child{min-width:0}
@@ -282,9 +293,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     </div>
     <div class="toprow tabs" role="group" aria-label="分頁">
       <button class="tabbtn" data-tab="money" aria-pressed="true" type="button">💰 記帳</button>
+      <button class="tabbtn" data-tab="cc" aria-pressed="false" type="button">💳 簽賬</button>
       <button class="tabbtn" data-tab="note" aria-pressed="false" type="button">📒 記事<span class="cnt" id="nTodayCnt" hidden></span></button>
     </div>
-    <div class="toprow">
+    <div class="toprow" id="ymRow">
       <div class="ym">
         <button class="arrow" id="prev" type="button" aria-label="上個月">‹</button>
         <input id="yIn" type="number" inputmode="numeric" min="2000" max="2100" aria-label="年">
@@ -359,6 +371,23 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 
 
   </div>
+  <div id="tabCc" hidden>
+  <section class="card" aria-labelledby="ccH">
+    <h2 id="ccH">💳 信用卡簽賬 <small>純記數，唔會計入戶口結餘；還卡數就喺「記帳」記「卡數」</small></h2>
+    <div class="ccsums" id="ccSum"></div>
+    <div class="editbar" id="ccEditBar" hidden><span>✏️ 編輯緊呢筆簽賬</span><button class="mini" id="ccEditCancel" type="button">取消編輯</button></div>
+    <div class="chips" id="ccCards" role="group" aria-label="信用卡"></div>
+    <input class="amtin" id="cAmt" inputmode="decimal" placeholder="$0.00" aria-label="簽賬金額">
+    <div class="chips" id="ccCats" role="group" aria-label="類別"></div>
+    <input class="f" id="cNote" placeholder="備註（可以唔填），例：淘寶" aria-label="備註" autocomplete="off">
+    <div class="brow"><input class="f num" id="cDate" type="date" aria-label="日期" style="flex:1"><button class="btn" id="cSave" type="button">記低！</button></div>
+  </section>
+  <section class="card" aria-labelledby="cclH">
+    <h2 id="cclH" class="foldh">🧾 簽賬明細 <small>按截數期分組；截咗數嘅可以標記已找</small><button class="foldbtn" type="button" aria-expanded="true" aria-label="收起或者打開簽賬明細">▾</button></h2>
+    <div class="chips" id="ccFilter" role="group" aria-label="篩選信用卡"></div>
+    <div class="dl" id="ccList"></div>
+  </section>
+  </div>
   <div id="tabNote" hidden>
   <section class="card" aria-labelledby="nremH">
     <h2 id="nremH" class="foldh">⏰ 提醒 <small>今日同未來 7 日</small><button class="foldbtn" type="button" aria-expanded="true" aria-label="收起或者打開提醒">▾</button></h2>
@@ -401,6 +430,17 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       <input class="f tn" id="ntNewN" placeholder="新 tag 名，例：剪髮" aria-label="新 tag 名稱" style="flex:1">
       <button class="mini acc" id="ntAdd" type="button">＋加</button>
     </div>
+    </details>
+    <details class="tagbox" id="ccBox" hidden>
+      <summary><b>💳 我的信用卡</b><span class="hint">改名、換 emoji、設定每月截數日</span></summary>
+      <div id="ccCfgList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <div class="tagrow">
+        <button class="f tem tembtn" id="ccNewE" type="button" aria-label="新卡嘅 emoji，撳嚟揀" data-v="">💳</button>
+        <input class="f tn" id="ccNewN" placeholder="卡名，例：HSBC" aria-label="新卡名稱">
+        <input class="f num ccut" id="ccNewC" inputmode="numeric" placeholder="15" aria-label="每月截數日">
+        <button class="mini acc" id="ccAdd" type="button">＋加</button>
+      </div>
+      <span class="hint">截數日 = 月結單每月截數嗰日（1–31，嗰個月冇呢日就用月尾）。有簽賬嘅卡唔刪得。</span>
     </details>
     <details class="tagbox" id="goalBox">
       <summary><b>🎯 理想金額設定</b><span class="hint">每期儲蓄目標、開心錢上限</span></summary>
@@ -838,7 +878,7 @@ function renderCal(){
     if(k<todayStr()){r.classList.add("past");r.title="已過"}
     const b=document.createElement("b");b.textContent=`${mmm}/${dd}（${WD[new Date(yy,mmm-1,dd).getDay()]}）`;
     const s=document.createElement("span");s.textContent=HOL[k];r.append(b,s);hb.append(r)});
-  renderList(mm);renderCats(mm);
+  renderList(mm);renderCats(mm);renderCc();
 }
 
 function entryRow(e,onTap){
@@ -977,12 +1017,147 @@ async function setNTags(list){if(!need())return false;try{await db.doc("plancfg/
 const nTimeGet=()=>{const h=$("nHr").value;return h===""?"":h+":"+($("nMn").value||"00")};
 function nTimeSet(v){const [h,m]=(v||"").split(":");$("nHr").value=h||"";$("nMn").value=m||""}
 /* 分頁 */
-function setTab(t){TAB=t==="note"?"note":"money";ls.set("kk-tab",TAB);
+/* 💳 信用卡簽賬：純記數，唔計入戶口結餘同今期支出
+   charges/{id}：{date,amt,card,cat,note,ts,paid?,paidAt?}
+   ccfg/main：{cards:[{k,n,e,cut}]}（cut = 每月截數日，1–31） */
+var charges=[],ccfg={},ccCard=null,ccCat=null,ccEdit=null,ccFilter="all";
+const CC_DEF=[{k:"c1",n:"信用卡",e:"💳",cut:15}];
+const ccCards=()=>Array.isArray(ccfg.cards)&&ccfg.cards.length?ccfg.cards:CC_DEF;
+const ccCardOf=k=>ccCards().find(c=>c.k===k)||{k,n:"已刪除嘅卡",e:"💳",cut:15};
+const ccMd=d=>{const [,m,dd]=d.split("-");return `${+m}/${+dd}`};
+const stmtEnd=(y,m,cut)=>ds(y,m,Math.min(cut,dim(y,m)));
+/* 某日屬於邊一期：截數日當日計入嗰期，之後就入下一期 */
+function stmtOf(date,cut){
+  cut=Math.min(31,Math.max(1,parseInt(cut)||15));const [y,m]=date.split("-").map(Number);
+  let end=stmtEnd(y,m,cut);if(date>end){let ny=y,nm=m+1;if(nm>12){nm=1;ny++}end=stmtEnd(ny,nm,cut)}
+  const [ey,em]=end.split("-").map(Number);let py=ey,pm=em-1;if(pm<1){pm=12;py--}
+  return {start:addDays(stmtEnd(py,pm,cut),1),end};
+}
+function ccStmts(cardK){
+  const card=ccCardOf(cardK),map=new Map(),t=todayStr();
+  (charges||[]).filter(c=>c.card===cardK).forEach(c=>{const s=stmtOf(c.date,card.cut);if(!map.has(s.end))map.set(s.end,{...s,items:[]});map.get(s.end).items.push(c)});
+  const cur=stmtOf(t,card.cut);if(!map.has(cur.end))map.set(cur.end,{...cur,items:[]});
+  return [...map.values()].map(s=>{
+    s.items.sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:(b.ts||0)-(a.ts||0));
+    s.total=Math.round(s.items.reduce((v,c)=>v+c.amt,0)*100)/100;
+    s.closed=s.end<t;s.paid=s.items.length>0&&s.items.every(c=>c.paid);return s}).sort((a,b)=>a.end<b.end?1:-1);
+}
+function ccUnpaid(){const out=[];ccCards().forEach(card=>ccStmts(card.k).forEach(s=>{if(s.closed&&s.items.length&&!s.paid)out.push({card,s})}));return out}
+async function setCcfg(cards){if(!need())return false;try{await db.doc("ccfg/main").set({...ccfg,cards});return true}catch(e){toast("儲唔到");return false}}
+async function markPaid(cardK,end,on){
+  if(!need())return;const card=ccCardOf(cardK),s=ccStmts(cardK).find(x=>x.end===end);if(!s)return;
+  try{for(const c of s.items){const {id,...d}=c;if(on)await db.doc("charges/"+id).set({...d,paid:true,paidAt:todayStr()});else{delete d.paid;delete d.paidAt;await db.doc("charges/"+id).set(d)}}
+    toast(on?`${card.e} ${card.n} ${ccMd(end)} 截數嗰期已找 ✅`:"已取消找數標記")}catch(e){toast("儲唔到")}
+}
+function ccChip(label,on,fn){const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=label;b.setAttribute("aria-pressed",on);b.onclick=fn;return b}
+function ccRow(c){
+  const cat=ALL[c.cat]||ALL.other,r=document.createElement("div");r.className="ent tap"+(c.id===ccEdit?" editing":"")+(c.paid?" ccpaid":"");
+  const ic=document.createElement("div");ic.className="ic";ic.style.background=cat.c+"33";ic.textContent=cat.e;
+  const tx=document.createElement("div");tx.className="tx";tx.textContent=`${ccMd(c.date)} ${cat.n}`;
+  if(c.note){const sm=document.createElement("small");sm.textContent=c.note;tx.append(sm)}
+  const a=document.createElement("div");a.className="a";a.textContent=money(c.amt);
+  const d=document.createElement("button");d.type="button";d.className="mini del";d.textContent="刪";d.setAttribute("aria-label","刪除呢筆簽賬");
+  d.onclick=ev=>{ev.stopPropagation();if(!d.dataset.arm){d.dataset.arm=1;d.textContent="確定？";setTimeout(()=>{if(d.isConnected){delete d.dataset.arm;d.textContent="刪"}},2500);return}delCharge(c.id)};
+  r.onclick=()=>{ccEdit=c.id;ccCard=c.card;ccCat=c.cat;$("cAmt").value=String(c.amt);$("cNote").value=c.note||"";$("cDate").value=c.date;renderCc();$("cAmt").scrollIntoView({block:"center",behavior:"smooth"})};
+  r.append(ic,tx,a,d);return r;
+}
+function renderCc(){
+  if(!$("tabCc")||!Array.isArray(charges))return;
+  const sum=$("ccSum");sum.replaceChildren();
+  ccCards().forEach(card=>{
+    const st=ccStmts(card.k),cur=st.find(s=>!s.closed),last=st.find(s=>s.closed&&s.items.length);
+    const d=document.createElement("div");d.className="ccsum";
+    const h=document.createElement("b");h.textContent=`${card.e} ${card.n}`;
+    const sub=document.createElement("small");sub.textContent=`每月 ${card.cut} 號截數`;d.append(h,sub);
+    const row=(l,v)=>{const r=document.createElement("div");r.className="ccrow";const a=document.createElement("span");a.textContent=l;const b=document.createElement("b");b.textContent=money(v);r.append(a,b);d.append(r)};
+    if(cur)row(`今期（${ccMd(cur.start)}–${ccMd(cur.end)}）`,cur.total);
+    if(last)row(`${ccMd(last.end)} 截數 ${last.paid?"✅ 已找":"⏳ 未找"}`,last.total);
+    sum.append(d)});
+  if(!ccCards().some(c=>c.k===ccCard))ccCard=ccCards()[0].k;
+  const cc=$("ccCards");cc.replaceChildren();ccCards().forEach(c=>cc.append(ccChip(`${c.e} ${c.n}`,c.k===ccCard,()=>{ccCard=c.k;renderCc()})));
+  const cats=CATS.filter(c=>c.k!=="save");if(!cats.some(c=>c.k===ccCat))ccCat=cats[0]?.k||"other";
+  const ct=$("ccCats");ct.replaceChildren();cats.forEach(c=>ct.append(ccChip(`${c.e} ${c.n}`,c.k===ccCat,()=>{ccCat=c.k;renderCc()})));
+  if(!$("cDate").value)$("cDate").value=todayStr();
+  $("ccEditBar").hidden=!ccEdit;$("cSave").textContent=ccEdit?"改好！":"記低！";
+  const fl=$("ccFilter");fl.replaceChildren();
+  if(ccFilter!=="all"&&!ccCards().some(c=>c.k===ccFilter))ccFilter="all";
+  if(ccCards().length>1)[{k:"all",n:"全部",e:"🗂️"},...ccCards()].forEach(c=>fl.append(ccChip(`${c.e} ${c.n}`,c.k===ccFilter,()=>{ccFilter=c.k;renderCc()})));
+  fl.hidden=ccCards().length<2;
+  const box=$("ccList");box.replaceChildren();
+  (ccFilter==="all"?ccCards():ccCards().filter(c=>c.k===ccFilter)).forEach(card=>{
+    ccStmts(card.k).slice(0,6).forEach(s=>{
+      if(!s.items.length&&s.closed)return;
+      const h=document.createElement("div");h.className="dh";
+      const l=document.createElement("span");l.textContent=`${card.e} ${card.n}・${ccMd(s.start)}–${ccMd(s.end)}${s.closed?(s.paid?" ✅ 已找":" ⏳ 未找"):"（未截數）"}`;
+      const r=document.createElement("span");r.textContent=money(s.total);h.append(l,r);box.append(h);
+      if(s.closed&&s.items.length){const w=document.createElement("div");w.className="ccact";
+        const b=document.createElement("button");b.type="button";b.className="mini"+(s.paid?"":" acc");b.textContent=s.paid?"↺ 取消已找":"✅ 標記已找數";
+        b.onclick=()=>markPaid(card.k,s.end,!s.paid);w.append(b);box.append(w)}
+      if(!s.items.length){const e=document.createElement("div");e.className="empty";e.textContent="今期未有簽賬";box.append(e)}
+      s.items.forEach(c=>box.append(ccRow(c)));
+    })});
+  renderCcCfg();
+}
+function renderCcCfg(){
+  const box=$("ccCfgList");if(!box||box.contains(document.activeElement))return;box.replaceChildren();
+  ccCards().forEach(card=>{
+    const r=document.createElement("div");r.className="tagrow";
+    const eb=document.createElement("button");eb.type="button";eb.className="f tem tembtn";eb.textContent=card.e;eb.setAttribute("aria-label",`${card.n} 嘅 emoji，撳嚟揀`);
+    const n=document.createElement("input");n.className="f tn";n.value=card.n;n.setAttribute("aria-label","卡名");
+    const cu=document.createElement("input");cu.className="f num ccut";cu.inputMode="numeric";cu.value=card.cut;cu.setAttribute("aria-label",`${card.n} 每月截數日`);
+    const lab=document.createElement("span");lab.className="hint";lab.textContent="號截";
+    const commit=pick=>{const ne=(pick||eb.textContent).trim()||card.e,nn=n.value.trim()||card.n,nc=Math.min(31,Math.max(1,parseInt(cu.value)||card.cut));
+      if(ne===card.e&&nn===card.n&&nc===card.cut)return;
+      setCcfg(ccCards().map(x=>x.k===card.k?{...x,e:ne,n:nn,cut:nc}:x)).then(ok=>{if(ok)toast(`已更新 ${ne} ${nn}（${nc} 號截數）`)})};
+    eb.onclick=()=>emojiPick(eb,e=>{eb.textContent=e;commit(e)});
+    n.onkeydown=cu.onkeydown=ev=>{if(ev.key==="Enter")ev.target.blur()};
+    r.addEventListener("focusout",ev=>{if(!r.contains(ev.relatedTarget))commit()});
+    const d=document.createElement("button");d.type="button";d.className="mini del";d.textContent="刪";
+    d.onclick=()=>{if((charges||[]).some(c=>c.card===card.k)){toast("有簽賬用緊呢張卡，刪唔到");return}
+      if(ccCards().length<=1){toast("最少要留一張卡");return}
+      if(!d.dataset.arm){d.dataset.arm=1;d.textContent="確定？";setTimeout(()=>{if(d.isConnected){delete d.dataset.arm;d.textContent="刪"}},2500);return}
+      setCcfg(ccCards().filter(x=>x.k!==card.k)).then(ok=>{if(ok)toast(`刪咗 ${card.n}`)})};
+    r.append(eb,n,cu,lab,d);box.append(r)});
+}
+function ccResetForm(){ccEdit=null;$("cAmt").value="";$("cNote").value="";$("cDate").value=todayStr();renderCc()}
+async function delCharge(id){if(!need())return;try{await db.doc("charges/"+id).delete();if(ccEdit===id)ccResetForm();toast("刪咗")}catch(e){toast("刪唔到")}}
+$("ccEditCancel").onclick=ccResetForm;
+$("cSave").onclick=async()=>{
+  const amt=Math.round(parseFloat(String($("cAmt").value).replace(/[$,\s]/g,""))*100)/100,date=$("cDate").value;
+  if(!(amt>0)){toast("金額要大過 0 喎");return}if(!date){toast("揀返個日子先");return}if(!need())return;
+  const b=$("cSave");b.disabled=true;
+  const data={date,amt,card:ccCard||ccCards()[0].k,cat:ccCat||"other",note:$("cNote").value.trim()};
+  try{
+    if(ccEdit){const old=(charges||[]).find(c=>c.id===ccEdit),keep=old&&old.paid?{paid:true,paidAt:old.paidAt}:{};
+      await db.doc("charges/"+ccEdit).set({...data,...keep,ts:old?.ts||Date.now()});ccEdit=null;$("cAmt").value="";$("cNote").value="";toast("改好咗 ✏️")}
+    else{await db.collection("charges").add({...data,ts:Date.now()});$("cAmt").value="";$("cNote").value="";toast("記低咗 💳（唔計入結餘）");$("cAmt").focus()}
+  }catch(e){toast("儲唔到："+(e.message||e.code||"再試吓"))}
+  b.disabled=false;renderCc()};
+$("ccNewE").onclick=()=>emojiPick($("ccNewE"),e=>{$("ccNewE").textContent=e;$("ccNewE").dataset.v=e});
+$("ccAdd").onclick=()=>{
+  const n=$("ccNewN").value.trim(),cut=parseInt($("ccNewC").value||"15"),e=$("ccNewE").dataset.v||"💳";
+  if(!n){toast("要填卡名");return}if(!(cut>=1&&cut<=31)){toast("截數日要 1–31");return}
+  /* 第一次加卡：預設嗰張「信用卡」未用過就直接換走 */
+  const base=Array.isArray(ccfg.cards)&&ccfg.cards.length?ccfg.cards:((charges||[]).some(c=>c.card==="c1")?CC_DEF:[]);
+  setCcfg([...base,{k:"c"+Date.now().toString(36),n,e,cut}]).then(ok=>{if(ok){$("ccNewN").value="";$("ccNewC").value="";$("ccNewE").textContent="💳";$("ccNewE").dataset.v="";toast(`加咗 ${e} ${n}`)}})};
+$("ccNewN").onkeydown=$("ccNewC").onkeydown=e=>{if(e.key==="Enter")$("ccAdd").click()};
+/* 記帳記「卡數」之後，問一句要唔要將截咗數嘅簽賬標記已找 */
+function askCcPaid(up,amt){
+  const d=$("ccPayDlg"),L=$("ccPayList");L.replaceChildren();
+  const best=up.length===1?0:up.findIndex(x=>Math.abs(x.s.total-amt)<0.01);
+  up.forEach((x,i)=>{const lb=document.createElement("label");const cb=document.createElement("input");cb.type="checkbox";cb.checked=i===best;cb.dataset.i=i;
+    const sp=document.createElement("span");sp.textContent=`${x.card.e} ${x.card.n}・${ccMd(x.s.start)}–${ccMd(x.s.end)}　${money(x.s.total)}`;lb.append(cb,sp);L.append(lb)});
+  d.hidden=false;
+  const done=()=>{d.hidden=true;$("ccPayOk").onclick=$("ccPayNo").onclick=d.onclick=null};
+  $("ccPayNo").onclick=done;d.onclick=e=>{if(e.target===d)done()};
+  $("ccPayOk").onclick=async()=>{const pick=[...L.querySelectorAll("input:checked")].map(c=>up[+c.dataset.i]);done();for(const x of pick)await markPaid(x.card.k,x.s.end,true)};
+}
+function setTab(t){TAB=t==="note"||t==="cc"?t:"money";ls.set("kk-tab",TAB);
   document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tab===TAB));
-  $("tabMoney").hidden=TAB!=="money";$("tabNote").hidden=TAB!=="note";
-  $("tagBox").hidden=TAB==="note";$("goalBox").hidden=TAB==="note";$("ntagBox").hidden=TAB!=="note";
-  $("ghAutoLab").textContent=TAB==="note"?"記事之後（15秒）自動上傳":"改數之後（15秒）自動上傳";
-  const v=TAB==="note"?nview:view;$("yIn").value=v.y;$("mIn").value=v.m;window.scrollTo(0,0)}
+  $("tabMoney").hidden=TAB!=="money";$("tabNote").hidden=TAB!=="note";$("tabCc").hidden=TAB!=="cc";$("ymRow").hidden=TAB==="cc";$("ccBox").hidden=TAB!=="cc";
+  $("tagBox").hidden=TAB==="note";$("goalBox").hidden=TAB!=="money";$("ntagBox").hidden=TAB!=="note";
+  $("ghAutoLab").textContent=TAB==="note"?"記事之後（15秒）自動上傳":TAB==="cc"?"記簽賬之後（15秒）自動上傳":"改數之後（15秒）自動上傳";
+  const v=TAB==="note"?nview:view;$("yIn").value=v.y;$("mIn").value=v.m;window.scrollTo(0,0);if(TAB==="cc")renderCc()}
 document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 function ngo(y,m){if(m<1){m=12;y--}if(m>12){m=1;y++}nview={y,m};ls.set("kk-nview",JSON.stringify(nview));renderNCal()}
 
@@ -1211,7 +1386,8 @@ $("eSave").onclick=async()=>{
   try{
     if(editId){const old=entries.find(e=>e.id===editId);await db.doc("entries/"+editId).set({...data,ts:old?.ts||Date.now()});
       sel=date;resetForm();toast("改好咗 ✏️")}
-    else{await db.collection("entries").add({...data,ts:Date.now()});$("eAmt").value="";$("eNote").value="";toast("記低咗 ✍️");$("eAmt").focus()}
+    else{await db.collection("entries").add({...data,ts:Date.now()});$("eAmt").value="";$("eNote").value="";toast("記低咗 ✍️");$("eAmt").focus();
+      if(data.cat==="card"&&data.kind==="out"){const up=ccUnpaid();if(up.length)askCcPaid(up,data.amt)}}
     if(days[date]?.zero&&kind==="out")await db.doc("days/"+date).set({zero:false});
   }catch(e){toast("儲唔到："+(e.message||e.code||"再試吓"))}
   b.disabled=false;drawSheet()};
@@ -1302,7 +1478,7 @@ $("prev").onclick=()=>goCur(curV().y,curV().m-1);$("next").onclick=()=>goCur(cur
 $("yIn").onchange=()=>{const y=parseInt($("yIn").value);if(y>=2000&&y<=2100)goCur(y,curV().m);else $("yIn").value=curV().y};
 $("mIn").onchange=()=>goCur(curV().y,+$("mIn").value);
 $("goToday").onclick=()=>{const t=new Date();goCur(t.getFullYear(),t.getMonth()+1)};
-setTab(ls.get("kk-tab")==="note"?"note":"money");renderNote();
+setTab(ls.get("kk-tab")||"money");renderNote();
 
 /* 日夜模式：自動（香港日出至日落為日間，其餘夜間）／ 日間 ／ 夜間，記住自己揀嘅 */
 const TH_MODES=["auto","light","dark"];
@@ -1360,7 +1536,7 @@ const KK_KEY="kk-local-data";
 let store;
 function loadStore(){
   let s=null;try{s=JSON.parse(localStorage.getItem(KK_KEY)||"null")}catch(e){}
-  s=s&&typeof s==="object"?s:{};["entries","days","cycles","settings","plans","plancfg"].forEach(k=>{if(!s[k]||typeof s[k]!=="object")s[k]={}});
+  s=s&&typeof s==="object"?s:{};["entries","days","cycles","settings","plans","plancfg","charges","ccfg"].forEach(k=>{if(!s[k]||typeof s[k]!=="object")s[k]={}});
   return s;
 }
 store=loadStore();
@@ -1382,7 +1558,7 @@ const localDoc=p=>{const [c,id]=p.split("/");return{
 db={collection:localCol,doc:localDoc};
 
 $("exOff").onclick=()=>{
-  const payload={app:"kakeibo-backup",exportedAt:new Date().toISOString(),entries:store.entries,days:store.days,cycles:store.cycles,settings:store.settings,plans:store.plans,plancfg:store.plancfg};
+  const payload={app:"kakeibo-backup",exportedAt:new Date().toISOString(),entries:store.entries,days:store.days,cycles:store.cycles,settings:store.settings,plans:store.plans,plancfg:store.plancfg,charges:store.charges,ccfg:store.ccfg};
   const a=document.createElement("a");
   a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}));
   a.download=`家計簿備份_${todayStr()}.json`;document.body.append(a);a.click();
@@ -1393,7 +1569,7 @@ $("imIn").onchange=async e=>{
   let j;try{j=JSON.parse(await f.text())}catch(err){toast("唔係有效嘅備份檔");return}
   if(!j||typeof j.entries!=="object"||Array.isArray(j.entries)){toast("備份格式唔啱");return}
   if(!confirm("匯入會取代呢個瀏覽器入面所有嘅數，確定？"))return;
-  store={entries:j.entries||{},days:j.days||{},cycles:j.cycles||{},settings:j.settings||{},plans:j.plans||{},plancfg:j.plancfg||{}};
+  store={entries:j.entries||{},days:j.days||{},cycles:j.cycles||{},settings:j.settings||{},plans:j.plans||{},plancfg:j.plancfg||{},charges:j.charges||{},ccfg:j.ccfg||{}};
   saveStore();location.reload();
 };
 
@@ -1421,12 +1597,13 @@ function scheduleAuto(){
   syncTimer=setTimeout(()=>ghUpload(true),15000);
   setGhStatus("⏳ 15 秒後自動上傳…");
 }
-const GH_COLS=[["entries","記帳"],["days","零用日"],["cycles","出糧期"],["plans","記事"],["plancfg","記事 tag"],["settings","設定"]];
+const GH_COLS=[["entries","記帳"],["days","零用日"],["cycles","出糧期"],["plans","記事"],["plancfg","記事 tag"],["charges","簽賬"],["ccfg","信用卡"],["settings","設定"]];
 const ghLabel=(col,k,v)=>{
-  if(col==="settings"||col==="plancfg")return `${k} = ${String(JSON.stringify(v)).slice(0,60)}`;
+  if(col==="settings"||col==="plancfg"||col==="ccfg")return `${k} = ${String(JSON.stringify(v)).slice(0,60)}`;
   if(!v||typeof v!=="object")return String(k);
   if(col==="entries")return `${v.date||""} $${v.amt??""} ${v.note||""}`.trim();
   if(col==="plans")return `${v.date||""} ${v.title||""}`.trim();
+  if(col==="charges")return `${v.date||""} $${v.amt??""} ${v.note||""}`.trim();
   if(col==="days")return `${k}${v.zero?"（零用）":""}`;
   return String(k);
 };
@@ -1436,7 +1613,7 @@ const stableStr=v=>{
   return JSON.stringify(v===undefined?null:v);
 };
 const ghUnwrap=(col,v)=>{
-  if((col==="settings"||col==="plancfg")&&v&&typeof v==="object"&&!Array.isArray(v)&&Object.keys(v).length===1&&v.main&&typeof v.main==="object")return v.main;
+  if((col==="settings"||col==="plancfg"||col==="ccfg")&&v&&typeof v==="object"&&!Array.isArray(v)&&Object.keys(v).length===1&&v.main&&typeof v.main==="object")return v.main;
   return v&&typeof v==="object"?v:{};
 };
 /* 比較本機同 GitHub 版本：新增（本機有）、改動、刪走（GitHub 有、本機冇） */
@@ -1508,7 +1685,7 @@ async function ghUpload(auto){
         if(!ok){setGhStatus("已取消，GitHub 未有改動");return false}
       }
     }
-    const payload=JSON.stringify({app:"kakeibo-backup",exportedAt:new Date().toISOString(),entries:store.entries,days:store.days,cycles:store.cycles,settings:store.settings,plans:store.plans,plancfg:store.plancfg},null,2);
+    const payload=JSON.stringify({app:"kakeibo-backup",exportedAt:new Date().toISOString(),entries:store.entries,days:store.days,cycles:store.cycles,settings:store.settings,plans:store.plans,plancfg:store.plancfg,charges:store.charges,ccfg:store.ccfg},null,2);
     const body={message:"backup "+new Date().toISOString().slice(0,16).replace("T"," "),content:b64enc(payload)};
     if(remote)body.sha=remote.sha;
     const p=await fetch(ghURL(c),{method:"PUT",headers:{...ghHead(c),"Content-Type":"application/json"},body:JSON.stringify(body)});
@@ -1536,7 +1713,7 @@ async function ghRestore(){
     const data=JSON.parse(b64dec(j.content));
     if(!data||typeof data.entries!=="object"||Array.isArray(data.entries))throw new Error("GitHub 上面嘅檔案格式唔啱");
     ghSet({...ghCfg(),sha:j.sha,last:new Date().toISOString()});
-    store={entries:data.entries||{},days:data.days||{},cycles:data.cycles||{},settings:data.settings||{},plans:data.plans||{},plancfg:data.plancfg||{}};
+    store={entries:data.entries||{},days:data.days||{},cycles:data.cycles||{},settings:data.settings||{},plans:data.plans||{},plancfg:data.plancfg||{},charges:data.charges||{},ccfg:data.ccfg||{}};
     restoring=true;saveStore();location.reload();
   }catch(e){setGhStatus("❌ "+e.message);toast(e.message)}
 }
@@ -1565,6 +1742,8 @@ loadGhForm();
   db.collection("cycles").onSnapshot(s=>{cycles=Object.fromEntries(s.docs.map(d=>[d.id,d.data()]));render()});
   db.collection("plans").onSnapshot(s=>{plans=s.docs.map(d=>({...d.data(),id:d.id})).filter(p=>p.date&&p.title);renderNote()});
   db.doc("plancfg/main").onSnapshot(s=>{plancfg=s.exists?s.data()||{}:{};renderNote()});
+  db.collection("charges").onSnapshot(s=>{charges=s.docs.map(d=>({...d.data(),id:d.id})).filter(c=>c.date&&c.amt>0);renderCc()});
+  db.doc("ccfg/main").onSnapshot(s=>{ccfg=s.exists?s.data()||{}:{};renderCc()});
   db.doc("settings/main").onSnapshot(s=>{if(s.exists)settings={...settings,...s.data()};applyTags();fillSettings();render();if(sel)drawChips()});
 })();
 holFetch(false);
@@ -1577,6 +1756,17 @@ holFetch(false);
       <button class="btn ghost" id="ghDiffRestore" type="button">⬇️ 改用 GitHub 版本</button>
       <button class="btn ghost" id="ghDiffNo" type="button">取消</button>
       <button class="btn" id="ghDiffOk" type="button">⬆️ 確定覆寫</button>
+    </div>
+  </div>
+</div>
+<div class="ghmodal" id="ccPayDlg" hidden>
+  <div class="ghdlg" role="dialog" aria-modal="true" aria-labelledby="ccPayH">
+    <h3 id="ccPayH">💳 順手標記已找數？</h3>
+    <div class="ghsub">你啱啱記咗「卡數」。揀返今次還緊邊期嘅簽賬：</div>
+    <div class="ccpaylist" id="ccPayList"></div>
+    <div class="ghact">
+      <button class="btn ghost" id="ccPayNo" type="button">遲啲先</button>
+      <button class="btn" id="ccPayOk" type="button">✅ 標記已找數</button>
     </div>
   </div>
 </div>
