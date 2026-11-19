@@ -733,10 +733,13 @@ function carryOf(c,depth=0){
 
 function renderCycle(){
   const t=todayStr(),c=cycleOf(t),cd=cycles[c.start]||{},st=cycleStats(c),cr=carryOf(c);
-  const est=cr.v+st.inc-st.out,mb=settings.balance;
+  /* 戶口結餘只計到今日：日期喺將來嘅紀錄（例如預先標記嘅出糧日人工）到咗嗰日先會計入 */
+  const stNow=cycleStats({start:c.start,end:t<c.end?t:c.end});
+  const est=cr.v+stNow.inc-stNow.out,mb=settings.balance;
+  const futN=entries.filter(e=>e.date>t).length;
   /* 自己填咗結餘：用嗰個數，再加減之後新記嘅紀錄 */
   let bal=est;
-  if(mb&&typeof mb.amt==="number"){const after=entries.filter(e=>(e.ts||0)>mb.ts);
+  if(mb&&typeof mb.amt==="number"){const after=entries.filter(e=>(e.ts||0)>mb.ts&&e.date<=t);
     bal=mb.amt+after.filter(e=>e.kind==="in").reduce((s,e)=>s+e.amt,0)-after.filter(e=>e.kind!=="in").reduce((s,e)=>s+e.amt,0)}
   const pend=cd.pending||[],pendSum=pend.reduce((s,p)=>s+p.amt,0),free=bal-pendSum;
   const [,sm,sd]=c.start.split("-"),[,em,ed]=c.end.split("-");
@@ -769,8 +772,8 @@ function renderCycle(){
   lastBal=bal;lastInc=st.inc;
   $("incV").textContent=money(st.pay);$("outV").textContent=money(st.out);$("balBtn").textContent=money(bal);
   if(mb&&typeof mb.amt==="number"){const [,bm,bd]=mb.date.split("-");$("balLab").textContent="戶口結餘";
-    $("balHint").textContent=`${+bm}/${+bd} 對數 ${money(mb.amt)}`+(Math.abs(bal-est)>=0.01?`・估算差 ${money(bal-est)}`:"")}
-  else{$("balLab").textContent="戶口結餘（估算）";$("balHint").textContent="撳數字填真實結餘"}
+    $("balHint").textContent=`${+bm}/${+bd} 對數 ${money(mb.amt)}`+(Math.abs(bal-est)>=0.01?`・估算差 ${money(bal-est)}`:"")+(futN?`・${futN} 筆未到日子，暫未計`:"")}
+  else{$("balLab").textContent="戶口結餘（估算）";$("balHint").textContent="撳數字填真實結餘"+(futN?`・${futN} 筆未到日子，暫未計`:"")}
   const sg=+settings.saveGoal||0,fc=+settings.funCap||0;
   $("saveV").textContent=plain(st.save);$("saveG").textContent=plain(sg);
   $("saveBar").style.width=(sg?Math.min(100,st.save/sg*100):0)+"%";
