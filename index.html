@@ -9,7 +9,8 @@
 <!-- 撳出去其他網站時，唔會話俾對方知你嚟自呢個網址 -->
 <meta name="referrer" content="no-referrer">
 <title>羊的家計簿</title>
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}.cchead{display:flex;align-items:center;justify-content:space-between;gap:8px}.cchead .ccedit{flex:none}#ccEdDlg .ghdlg{display:flex;flex-direction:column;gap:6px}
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;700;900&family=Space+Mono:wght@700&display=swap">
 <style id="kkStyle">
@@ -440,7 +441,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
         <input class="f num ccut" id="ccNewC" inputmode="numeric" placeholder="15" aria-label="每月截數日">
         <button class="mini acc" id="ccAdd" type="button">＋加</button>
       </div>
-      <span class="hint">截數日 = 月結單每月截數嗰日（1–31，嗰個月冇呢日就用月尾）。有簽賬嘅卡唔刪得。</span>
+      <span class="hint">💡 都可以喺「簽賬」頁頂張卡度撳「✏️ 改」。截數日 = 月結單每月截數嗰日（1–31，嗰個月冇呢日就用月尾）。有簽賬嘅卡唔刪得。</span>
     </details>
     <details class="tagbox" id="goalBox">
       <summary><b>🎯 理想金額設定</b><span class="hint">每期儲蓄目標、開心錢上限</span></summary>
@@ -1068,7 +1069,9 @@ function renderCc(){
     const st=ccStmts(card.k),cur=st.find(s=>!s.closed),last=st.find(s=>s.closed&&s.items.length);
     const d=document.createElement("div");d.className="ccsum";
     const h=document.createElement("b");h.textContent=`${card.e} ${card.n}`;
-    const sub=document.createElement("small");sub.textContent=`每月 ${card.cut} 號截數`;d.append(h,sub);
+    const sub=document.createElement("small");sub.textContent=`每月 ${card.cut} 號截數`;
+    const eb=document.createElement("button");eb.type="button";eb.className="mini ccedit";eb.textContent="✏️ 改";eb.setAttribute("aria-label",`改 ${card.n} 嘅名同截數日`);eb.onclick=()=>openCcEd(card.k);
+    const hd=document.createElement("div");hd.className="cchead";hd.append(h,eb);d.append(hd,sub);
     const row=(l,v)=>{const r=document.createElement("div");r.className="ccrow";const a=document.createElement("span");a.textContent=l;const b=document.createElement("b");b.textContent=money(v);r.append(a,b);d.append(r)};
     if(cur)row(`今期（${ccMd(cur.start)}–${ccMd(cur.end)}）`,cur.total);
     if(last)row(`${ccMd(last.end)} 截數 ${last.paid?"✅ 已找":"⏳ 未找"}`,last.total);
@@ -1098,6 +1101,17 @@ function renderCc(){
     })});
   renderCcCfg();
 }
+function openCcEd(k){
+  const card=ccCardOf(k),d=$("ccEdDlg"),n=$("ccEdN"),c=$("ccEdC");
+  $("ccEdH").textContent=`✏️ 改 ${card.e} ${card.n}`;n.value=card.n;c.value=card.cut;d.hidden=false;
+  const done=()=>{d.hidden=true};
+  $("ccEdNo").onclick=done;d.onclick=e=>{if(e.target===d)done()};
+  n.onkeydown=c.onkeydown=e=>{if(e.key==="Enter")$("ccEdOk").click()};
+  $("ccEdOk").onclick=()=>{const nn=n.value.trim(),nc=parseInt(c.value);
+    if(!nn){toast("要填卡名");return}if(!(nc>=1&&nc<=31)){toast("截數日要 1–31");return}
+    done();if(nn===card.n&&nc===card.cut)return;
+    setCcfg(ccCards().map(x=>x.k===k?{...x,n:nn,cut:nc}:x)).then(ok=>{if(ok)toast(`已更新 ${card.e} ${nn}（${nc} 號截數）`)})};
+}
 function renderCcCfg(){
   const box=$("ccCfgList");if(!box||box.contains(document.activeElement))return;box.replaceChildren();
   ccCards().forEach(card=>{
@@ -1111,7 +1125,7 @@ function renderCcCfg(){
       setCcfg(ccCards().map(x=>x.k===card.k?{...x,e:ne,n:nn,cut:nc}:x)).then(ok=>{if(ok)toast(`已更新 ${ne} ${nn}（${nc} 號截數）`)})};
     eb.onclick=()=>emojiPick(eb,e=>{eb.textContent=e;commit(e)});
     n.onkeydown=cu.onkeydown=ev=>{if(ev.key==="Enter")ev.target.blur()};
-    r.addEventListener("focusout",ev=>{if(!r.contains(ev.relatedTarget))commit()});
+    r.addEventListener("focusout",ev=>{if(!r.contains(ev.relatedTarget))commit()});n.onchange=cu.onchange=()=>commit();
     const d=document.createElement("button");d.type="button";d.className="mini del";d.textContent="刪";
     d.onclick=()=>{if((charges||[]).some(c=>c.card===card.k)){toast("有簽賬用緊呢張卡，刪唔到");return}
       if(ccCards().length<=1){toast("最少要留一張卡");return}
@@ -1767,6 +1781,20 @@ holFetch(false);
     <div class="ghact">
       <button class="btn ghost" id="ccPayNo" type="button">遲啲先</button>
       <button class="btn" id="ccPayOk" type="button">✅ 標記已找數</button>
+    </div>
+  </div>
+</div>
+<div class="ghmodal" id="ccEdDlg" hidden>
+  <div class="ghdlg" role="dialog" aria-modal="true" aria-labelledby="ccEdH">
+    <h3 id="ccEdH">✏️ 改信用卡</h3>
+    <div class="ghsub">截數日 = 月結單每月截數嗰日（1–31，嗰個月冇呢日就用月尾）。</div>
+    <label class="hint" for="ccEdN">卡名</label>
+    <input class="f" id="ccEdN" placeholder="例：HSBC" maxlength="20">
+    <label class="hint" for="ccEdC">每月幾號截數</label>
+    <input class="f num" id="ccEdC" inputmode="numeric" placeholder="15" maxlength="2">
+    <div class="ghact">
+      <button class="btn ghost" id="ccEdNo" type="button">取消</button>
+      <button class="btn" id="ccEdOk" type="button">💾 儲存</button>
     </div>
   </div>
 </div>
