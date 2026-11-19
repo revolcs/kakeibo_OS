@@ -10,6 +10,11 @@
 <meta name="referrer" content="no-referrer">
 <title>羊的家計簿</title>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}.cchead{display:flex;align-items:center;justify-content:space-between;gap:8px}.cchead .ccedit{flex:none}#ccEdDlg .ghdlg{display:flex;flex-direction:column;gap:6px}
+.day.sel{box-shadow:inset 0 0 0 3px var(--ink)}
+.ccday{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.ccdayh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:900}
+.ccsubh{font-weight:900;margin:10px 0 6px;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+#eCardRow .lab{font-weight:900;font-size:.85rem;align-self:center}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;700;900&family=Space+Mono:wght@700&display=swap">
@@ -383,6 +388,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     <input class="f" id="cNote" placeholder="備註（可以唔填），例：淘寶" aria-label="備註" autocomplete="off">
     <div class="brow"><input class="f num" id="cDate" type="date" aria-label="日期" style="flex:1"><button class="btn" id="cSave" type="button">記低！</button></div>
   </section>
+  <section class="card" aria-labelledby="cccalH">
+    <h2 id="cccalH">📅 <span id="ccalTitle"></span> 簽賬 <small id="cmonthSum"></small></h2>
+    <div class="cal" id="ccal"></div>
+    <div class="legend"><span>格仔數字 = 當日簽賬總額（連非簽賬）</span><span style="color:var(--sun)">紅字 = 公眾假期</span><span>👆 撳日子睇明細同喺嗰日記一筆；上下撥 = 轉月</span></div>
+    <div class="ccday" id="ccDay" hidden></div>
+  </section>
   <section class="card" aria-labelledby="cclH">
     <h2 id="cclH" class="foldh">🧾 簽賬明細 <small>按截數期分組；截咗數嘅可以標記已找</small><button class="foldbtn" type="button" aria-expanded="true" aria-label="收起或者打開簽賬明細">▾</button></h2>
     <div class="chips" id="ccFilter" role="group" aria-label="篩選信用卡"></div>
@@ -433,7 +444,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     </div>
     </details>
     <details class="tagbox" id="ccBox" hidden>
-      <summary><b>💳 我的信用卡</b><span class="hint">改名、換 emoji、設定每月截數日</span></summary>
+      <summary><b>💳 我的信用卡同簽賬類別</b><span class="hint">卡名、截數日、簽賬用嘅類別</span></summary>
       <div id="ccCfgList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
       <div class="tagrow">
         <button class="f tem tembtn" id="ccNewE" type="button" aria-label="新卡嘅 emoji，撳嚟揀" data-v="">💳</button>
@@ -442,6 +453,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
         <button class="mini acc" id="ccAdd" type="button">＋加</button>
       </div>
       <span class="hint">💡 都可以喺「簽賬」頁頂張卡度撳「✏️ 改」。截數日 = 月結單每月截數嗰日（1–31，嗰個月冇呢日就用月尾）。有簽賬嘅卡唔刪得。</span>
+      <div class="ccsubh">🏷️ 簽賬類別 <span class="hint">同記帳分開，改呢度唔會影響記帳</span></div>
+      <div id="ccCatList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <div class="tagrow">
+        <button class="f tem tembtn" id="ccCatNewE" type="button" aria-label="新類別嘅 emoji，撳嚟揀" data-v="">✨</button>
+        <input class="f tn" id="ccCatNewN" placeholder="新類別，例：網購" aria-label="新簽賬類別名稱" style="flex:1">
+        <button class="mini acc" id="ccCatAdd" type="button">＋加</button>
+      </div>
+      <span class="hint">▲▼ 調次序；改名撳 Enter 或者撳走就會儲存。有簽賬用緊嘅類別唔刪得。「🧾 非簽賬」係固定選項：唔使截數、唔使找數，純粹記低。</span>
     </details>
     <details class="tagbox" id="goalBox">
       <summary><b>🎯 理想金額設定</b><span class="hint">每期儲蓄目標、開心錢上限</span></summary>
@@ -496,6 +515,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       <input class="amtin" id="eAmt" inputmode="decimal" placeholder="$0.00" aria-label="金額">
       <div class="quick" id="quick" aria-label="用固定支出快速填"></div>
       <div class="chips" id="catChips" role="group" aria-label="類別"></div>
+      <div class="chips" id="eCardRow" role="group" aria-label="還邊張卡" hidden></div>
       <input class="f" id="eNote" placeholder="備註（可以唔填）" aria-label="備註">
       <div class="brow">
         <input class="f num" id="eDate" type="date" aria-label="日期" style="flex:1">
@@ -855,7 +875,7 @@ function dayCell(key,adj){
 }
 
 function renderCal(){
-  const {y,m}=view;if(TAB!=="note"){$("yIn").value=y;$("mIn").value=m}
+  const {y,m}=view;if(TAB==="money"){$("yIn").value=y;$("mIn").value=m}
   $("calTitle").textContent=`${y}年${m}月`;
   const cal=$("cal");cal.replaceChildren();
   WD.split("").forEach((w,i)=>{const d=document.createElement("div");d.className="dow s"+i;d.textContent=w;cal.append(d)});
@@ -885,7 +905,8 @@ function renderCal(){
 function entryRow(e,onTap){
   const c=ALL[e.cat]||ALL.other,r=document.createElement("div");r.className="ent tap"+(e.id===editId?" editing":"");
   const ic=document.createElement("span");ic.className="ic";ic.textContent=c.e;ic.style.background=c.c+"55";
-  const tx=document.createElement("div");tx.className="tx";tx.textContent=c.n;if(e.note){const s=document.createElement("small");s.textContent=e.note;tx.append(s)}
+  const tx=document.createElement("div");tx.className="tx";tx.textContent=c.n;
+  {const cc=e.cat==="card"&&e.ccard?ccCardOf(e.ccard):null,nt=[cc?`${cc.e} ${cc.n}`:"",e.note||""].filter(Boolean).join("・");if(nt){const s=document.createElement("small");s.textContent=nt;tx.append(s)}}
   const a=document.createElement("span");a.className="a"+(e.kind==="in"?" in":"");a.textContent=(e.kind==="in"?"+":"−")+money(e.amt).replace("-","");
   r.append(ic,tx,a);r.tabIndex=0;r.setAttribute("role","button");r.setAttribute("aria-label",`編輯 ${c.n} ${money(e.amt)}`);
   r.onclick=onTap;r.onkeydown=ev=>{if(ev.key==="Enter")onTap()};
@@ -1024,7 +1045,15 @@ function nTimeSet(v){const [h,m]=(v||"").split(":");$("nHr").value=h||"";$("nMn"
 var charges=[],ccfg={},ccCard=null,ccCat=null,ccEdit=null,ccFilter="all";
 const CC_DEF=[{k:"c1",n:"信用卡",e:"💳",cut:15}];
 const ccCards=()=>Array.isArray(ccfg.cards)&&ccfg.cards.length?ccfg.cards:CC_DEF;
-const ccCardOf=k=>ccCards().find(c=>c.k===k)||{k,n:"已刪除嘅卡",e:"💳",cut:15};
+const NOCC={k:"none",n:"非簽賬",e:"🧾",cut:31,none:true};
+const ccAll=()=>[...ccCards(),NOCC];
+const ccCardOf=k=>k==="none"?NOCC:(ccCards().find(c=>c.k===k)||{k,n:"已刪除嘅卡",e:"💳",cut:15});
+/* 簽賬類別：同記帳分開；未設定過就由記帳類別抄一份（唔包儲錢、卡數） */
+const ccCats=()=>Array.isArray(ccfg.cats)&&ccfg.cats.length?ccfg.cats:CATS.filter(c=>c.k!=="save"&&c.k!=="card").map(c=>({k:c.k,n:c.n,e:c.e}));
+const ccCatOf=k=>{const c=ccCats().find(x=>x.k===k)||ALL[k]||ALL.other||{k,n:"其他",e:"✨"};return {...c,c:c.c||(ALL[k]&&ALL[k].c)||"#a5b4c4"}};
+async function setCcCats(cats){if(!need())return false;try{await db.doc("ccfg/main").set({...ccfg,cats});return true}catch(e){toast("儲唔到");return false}}
+{const t=new Date(),s=ls.get("kk-cview");var cview=s?JSON.parse(s):{y:t.getFullYear(),m:t.getMonth()+1}}
+var ccSel=null;
 const ccMd=d=>{const [,m,dd]=d.split("-");return `${+m}/${+dd}`};
 const stmtEnd=(y,m,cut)=>ds(y,m,Math.min(cut,dim(y,m)));
 /* 某日屬於邊一期：截數日當日計入嗰期，之後就入下一期 */
@@ -1051,10 +1080,10 @@ async function markPaid(cardK,end,on){
     toast(on?`${card.e} ${card.n} ${ccMd(end)} 截數嗰期已找 ✅`:"已取消找數標記")}catch(e){toast("儲唔到")}
 }
 function ccChip(label,on,fn){const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=label;b.setAttribute("aria-pressed",on);b.onclick=fn;return b}
-function ccRow(c){
-  const cat=ALL[c.cat]||ALL.other,r=document.createElement("div");r.className="ent tap"+(c.id===ccEdit?" editing":"")+(c.paid?" ccpaid":"");
+function ccRow(c,showCard){
+  const cat=ccCatOf(c.cat),r=document.createElement("div");r.className="ent tap"+(c.id===ccEdit?" editing":"")+(c.paid?" ccpaid":"");
   const ic=document.createElement("div");ic.className="ic";ic.style.background=cat.c+"33";ic.textContent=cat.e;
-  const tx=document.createElement("div");tx.className="tx";tx.textContent=`${ccMd(c.date)} ${cat.n}`;
+  const tx=document.createElement("div");tx.className="tx";tx.textContent=showCard?`${ccCardOf(c.card).e} ${ccCardOf(c.card).n}・${cat.n}`:`${ccMd(c.date)} ${cat.n}`;
   if(c.note){const sm=document.createElement("small");sm.textContent=c.note;tx.append(sm)}
   const a=document.createElement("div");a.className="a";a.textContent=money(c.amt);
   const d=document.createElement("button");d.type="button";d.className="mini del";d.textContent="刪";d.setAttribute("aria-label","刪除呢筆簽賬");
@@ -1076,31 +1105,108 @@ function renderCc(){
     if(cur)row(`今期（${ccMd(cur.start)}–${ccMd(cur.end)}）`,cur.total);
     if(last)row(`${ccMd(last.end)} 截數 ${last.paid?"✅ 已找":"⏳ 未找"}`,last.total);
     sum.append(d)});
-  if(!ccCards().some(c=>c.k===ccCard))ccCard=ccCards()[0].k;
-  const cc=$("ccCards");cc.replaceChildren();ccCards().forEach(c=>cc.append(ccChip(`${c.e} ${c.n}`,c.k===ccCard,()=>{ccCard=c.k;renderCc()})));
-  const cats=CATS.filter(c=>c.k!=="save");if(!cats.some(c=>c.k===ccCat))ccCat=cats[0]?.k||"other";
+  const hasNone=(charges||[]).some(c=>c.card==="none");
+  if(hasNone){const pre=todayStr().slice(0,8),tot=(charges||[]).filter(c=>c.card==="none"&&c.date.startsWith(pre)).reduce((v,c)=>v+c.amt,0);
+    const d=document.createElement("div");d.className="ccsum";const h=document.createElement("b");h.textContent=`${NOCC.e} ${NOCC.n}`;
+    const sub=document.createElement("small");sub.textContent="純記數，唔使截數同找數";
+    const r=document.createElement("div");r.className="ccrow";const a=document.createElement("span");a.textContent=`${+pre.slice(5,7)}月`;const b=document.createElement("b");b.textContent=money(Math.round(tot*100)/100);r.append(a,b);
+    d.append(h,sub,r);sum.append(d)}
+  if(!ccAll().some(c=>c.k===ccCard))ccCard=ccCards()[0].k;
+  const cc=$("ccCards");cc.replaceChildren();ccAll().forEach(c=>cc.append(ccChip(`${c.e} ${c.n}`,c.k===ccCard,()=>{ccCard=c.k;renderCc()})));
+  const cats=ccCats();if(!cats.some(c=>c.k===ccCat))ccCat=cats[0]?.k||"other";
   const ct=$("ccCats");ct.replaceChildren();cats.forEach(c=>ct.append(ccChip(`${c.e} ${c.n}`,c.k===ccCat,()=>{ccCat=c.k;renderCc()})));
   if(!$("cDate").value)$("cDate").value=todayStr();
   $("ccEditBar").hidden=!ccEdit;$("cSave").textContent=ccEdit?"改好！":"記低！";
   const fl=$("ccFilter");fl.replaceChildren();
-  if(ccFilter!=="all"&&!ccCards().some(c=>c.k===ccFilter))ccFilter="all";
-  if(ccCards().length>1)[{k:"all",n:"全部",e:"🗂️"},...ccCards()].forEach(c=>fl.append(ccChip(`${c.e} ${c.n}`,c.k===ccFilter,()=>{ccFilter=c.k;renderCc()})));
-  fl.hidden=ccCards().length<2;
+  const FL=ccAll().filter(c=>!c.none||hasNone);
+  if(ccFilter!=="all"&&!FL.some(c=>c.k===ccFilter))ccFilter="all";
+  if(FL.length>1)[{k:"all",n:"全部",e:"🗂️"},...FL].forEach(c=>fl.append(ccChip(`${c.e} ${c.n}`,c.k===ccFilter,()=>{ccFilter=c.k;renderCc()})));
+  fl.hidden=FL.length<2;
   const box=$("ccList");box.replaceChildren();
-  (ccFilter==="all"?ccCards():ccCards().filter(c=>c.k===ccFilter)).forEach(card=>{
+  (ccFilter==="all"?FL:FL.filter(c=>c.k===ccFilter)).forEach(card=>{
     ccStmts(card.k).slice(0,6).forEach(s=>{
-      if(!s.items.length&&s.closed)return;
+      if(!s.items.length&&(s.closed||card.none))return;
       const h=document.createElement("div");h.className="dh";
-      const l=document.createElement("span");l.textContent=`${card.e} ${card.n}・${ccMd(s.start)}–${ccMd(s.end)}${s.closed?(s.paid?" ✅ 已找":" ⏳ 未找"):"（未截數）"}`;
+      const l=document.createElement("span");l.textContent=card.none?`${card.e} ${card.n}・${+s.end.slice(5,7)}月`:`${card.e} ${card.n}・${ccMd(s.start)}–${ccMd(s.end)}${s.closed?(s.paid?" ✅ 已找":" ⏳ 未找"):"（未截數）"}`;
       const r=document.createElement("span");r.textContent=money(s.total);h.append(l,r);box.append(h);
-      if(s.closed&&s.items.length){const w=document.createElement("div");w.className="ccact";
+      if(s.closed&&s.items.length&&!card.none){const w=document.createElement("div");w.className="ccact";
         const b=document.createElement("button");b.type="button";b.className="mini"+(s.paid?"":" acc");b.textContent=s.paid?"↺ 取消已找":"✅ 標記已找數";
         b.onclick=()=>markPaid(card.k,s.end,!s.paid);w.append(b);box.append(w)}
       if(!s.items.length){const e=document.createElement("div");e.className="empty";e.textContent="今期未有簽賬";box.append(e)}
       s.items.forEach(c=>box.append(ccRow(c)));
     })});
-  renderCcCfg();
+  renderCcCal();renderCcCfg();renderCcCatCfg();
 }
+/* 簽賬月曆 */
+function cgo(y,m){if(m<1){m=12;y--}if(m>12){m=1;y++}cview={y,m};ls.set("kk-cview",JSON.stringify(cview));renderCcCal()}
+function ccDayCell(key,adj){
+  const [y,m,d]=key.split("-").map(Number),wd=new Date(y,m-1,d).getDay();
+  const es=(charges||[]).filter(c=>c.date===key),tot=Math.round(es.reduce((v,c)=>v+c.amt,0)*100)/100,hol=HOL[key];
+  const b=document.createElement("button");b.type="button";
+  b.className="day s"+wd+(adj?" adj":"")+(es.length?" has":"")+(tot>=2000?" big":"")+(key===todayStr()?" today":"")+(key===ccSel?" sel":"")+(hol?" hol"+(key<todayStr()?" holpast":""):"");
+  const dn=document.createElement("span");dn.className="d";dn.textContent=d;
+  const mid=document.createElement("span");
+  if(hol&&!tot){mid.className="hn";mid.textContent=hol}else{mid.className="amt";mid.textContent=tot?cellAmt(tot):""}
+  let hs=null;if(hol&&tot){hs=document.createElement("span");hs.className="hn hs";hs.textContent=HOL_SHORT[hol]||hol}
+  const tg=document.createElement("span");tg.className="tag";
+  b.append(dn,...(hs?[hs]:[]),mid,tg);
+  b.setAttribute("aria-label",`${m}月${d}日${hol?"，"+hol:""}，簽賬 ${money(tot)}`);
+  b.onclick=()=>{ccSel=ccSel===key?null:key;if(ccSel&&!ccEdit)$("cDate").value=key;
+    if(adj){const [yy,mm]=key.split("-").map(Number);cgo(yy,mm)}else renderCcCal();
+    if(ccSel)setTimeout(()=>$("ccDay").scrollIntoView({block:"nearest",behavior:"smooth"}),30)};
+  return b;
+}
+function renderCcCal(){
+  if(!$("ccal")||!Array.isArray(charges))return;
+  const {y,m}=cview;if(TAB==="cc"){$("yIn").value=y;$("mIn").value=m}
+  $("ccalTitle").textContent=`${y}年${m}月`;
+  const cal=$("ccal");cal.replaceChildren();
+  WD.split("").forEach((w,i)=>{const d=document.createElement("div");d.className="dow s"+i;d.textContent=w;cal.append(d)});
+  const first=new Date(y,m-1,1).getDay(),n=dim(y,m),startKey=addDays(ds(y,m,1),-first),cells=Math.ceil((first+n)/7)*7;
+  for(let i=0;i<cells;i++){const key=addDays(startKey,i);cal.append(ccDayCell(key,!key.startsWith(`${y}-${pad(m)}-`)))}
+  const pre=`${y}-${pad(m)}-`,mm=(charges||[]).filter(c=>c.date.startsWith(pre));
+  $("cmonthSum").textContent=mm.length?`共 ${money(Math.round(mm.reduce((v,c)=>v+c.amt,0)*100)/100)}（唔計入結餘）`:"";
+  const box=$("ccDay");box.replaceChildren();box.hidden=!ccSel;if(!ccSel)return;
+  const [sy,sm,sd]=ccSel.split("-").map(Number),es=(charges||[]).filter(c=>c.date===ccSel).sort((a,b)=>(b.ts||0)-(a.ts||0));
+  const h=document.createElement("div");h.className="ccdayh";
+  const l=document.createElement("span");l.textContent=`${sm}月${sd}日（${WD[new Date(sy,sm-1,sd).getDay()]}）${HOL[ccSel]?" 🏖️ "+HOL[ccSel]:""}`;
+  const r=document.createElement("span");r.textContent=money(Math.round(es.reduce((v,c)=>v+c.amt,0)*100)/100);h.append(l,r);box.append(h);
+  if(!es.length){const e=document.createElement("div");e.className="empty";e.textContent="呢日未有簽賬";box.append(e)}
+  es.forEach(c=>box.append(ccRow(c,true)));
+  const w=document.createElement("div");w.className="ccact";
+  const x=document.createElement("button");x.type="button";x.className="mini";x.textContent="收起";x.onclick=()=>{ccSel=null;renderCcCal()};
+  const a=document.createElement("button");a.type="button";a.className="mini acc";a.textContent="＋喺呢日記一筆";
+  a.onclick=()=>{const k=ccSel;ccResetForm();$("cDate").value=k;$("cAmt").scrollIntoView({block:"center",behavior:"smooth"});setTimeout(()=>$("cAmt").focus(),250)};
+  w.append(x,a);box.append(w);
+}
+/* 設定：簽賬類別 */
+function renderCcCatCfg(){
+  const box=$("ccCatList");if(!box||box.contains(document.activeElement))return;box.replaceChildren();
+  const L=ccCats();
+  L.forEach((c,i)=>{
+    const r=document.createElement("div");r.className="tagrow";
+    const eb=document.createElement("button");eb.type="button";eb.className="f tem tembtn";eb.textContent=c.e;eb.setAttribute("aria-label",`${c.n} 嘅 emoji，撳嚟揀`);
+    const n=document.createElement("input");n.className="f tn";n.value=c.n;n.setAttribute("aria-label","類別名");n.style.flex="1";
+    const commit=pick=>{const ne=(pick||eb.textContent).trim()||c.e,nn=n.value.trim()||c.n;if(ne===c.e&&nn===c.n)return;
+      setCcCats(ccCats().map(x=>x.k===c.k?{k:x.k,n:nn,e:ne}:x)).then(ok=>{if(ok)toast(`已更新 ${ne} ${nn}`)})};
+    eb.onclick=()=>emojiPick(eb,e=>{eb.textContent=e;commit(e)});
+    n.onkeydown=ev=>{if(ev.key==="Enter")ev.target.blur()};n.onchange=()=>commit();
+    r.addEventListener("focusout",ev=>{if(!r.contains(ev.relatedTarget))commit()});
+    const mv=(dir)=>{const A=ccCats().slice(),j=i+dir;if(j<0||j>=A.length)return;[A[i],A[j]]=[A[j],A[i]];setCcCats(A)};
+    const up=document.createElement("button");up.type="button";up.className="mini";up.textContent="▲";up.setAttribute("aria-label",`${c.n} 向上`);up.disabled=i===0;up.onclick=()=>mv(-1);
+    const dn=document.createElement("button");dn.type="button";dn.className="mini";dn.textContent="▼";dn.setAttribute("aria-label",`${c.n} 向下`);dn.disabled=i===L.length-1;dn.onclick=()=>mv(1);
+    const d=document.createElement("button");d.type="button";d.className="mini del";d.textContent="刪";
+    d.onclick=()=>{if((charges||[]).some(x=>x.cat===c.k)){toast("有簽賬用緊呢個類別，刪唔到");return}
+      if(ccCats().length<=1){toast("最少要留一個類別");return}
+      if(!d.dataset.arm){d.dataset.arm=1;d.textContent="確定？";setTimeout(()=>{if(d.isConnected){delete d.dataset.arm;d.textContent="刪"}},2500);return}
+      setCcCats(ccCats().filter(x=>x.k!==c.k)).then(ok=>{if(ok)toast(`刪咗 ${c.n}`)})};
+    r.append(eb,n,up,dn,d);box.append(r)});
+}
+$("ccCatNewE").onclick=()=>emojiPick($("ccCatNewE"),e=>{$("ccCatNewE").textContent=e;$("ccCatNewE").dataset.v=e});
+$("ccCatAdd").onclick=()=>{const n=$("ccCatNewN").value.trim(),e=$("ccCatNewE").dataset.v||"✨";
+  if(!n){toast("要填類別名");return}if(ccCats().some(c=>c.n===n)){toast("已經有呢個類別");return}
+  setCcCats([...ccCats(),{k:"x"+Date.now().toString(36),n,e}]).then(ok=>{if(ok){$("ccCatNewN").value="";$("ccCatNewE").textContent="✨";$("ccCatNewE").dataset.v="";toast(`加咗 ${e} ${n}`)}})};
+$("ccCatNewN").onkeydown=e=>{if(e.key==="Enter")$("ccCatAdd").click()};
 function openCcEd(k){
   const card=ccCardOf(k),d=$("ccEdDlg"),n=$("ccEdN"),c=$("ccEdC");
   $("ccEdH").textContent=`✏️ 改 ${card.e} ${card.n}`;n.value=card.n;c.value=card.cut;d.hidden=false;
@@ -1168,10 +1274,10 @@ function askCcPaid(up,amt){
 }
 function setTab(t){TAB=t==="note"||t==="cc"?t:"money";ls.set("kk-tab",TAB);
   document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tab===TAB));
-  $("tabMoney").hidden=TAB!=="money";$("tabNote").hidden=TAB!=="note";$("tabCc").hidden=TAB!=="cc";$("ymRow").hidden=TAB==="cc";$("ccBox").hidden=TAB!=="cc";
-  $("tagBox").hidden=TAB==="note";$("goalBox").hidden=TAB!=="money";$("ntagBox").hidden=TAB!=="note";
+  $("tabMoney").hidden=TAB!=="money";$("tabNote").hidden=TAB!=="note";$("tabCc").hidden=TAB!=="cc";$("ccBox").hidden=TAB!=="cc";
+  $("tagBox").hidden=TAB!=="money";$("goalBox").hidden=TAB!=="money";$("ntagBox").hidden=TAB!=="note";
   $("ghAutoLab").textContent=TAB==="note"?"記事之後（15秒）自動上傳":TAB==="cc"?"記簽賬之後（15秒）自動上傳":"改數之後（15秒）自動上傳";
-  const v=TAB==="note"?nview:view;$("yIn").value=v.y;$("mIn").value=v.m;window.scrollTo(0,0);if(TAB==="cc")renderCc()}
+  const v=TAB==="note"?nview:TAB==="cc"?cview:view;$("yIn").value=v.y;$("mIn").value=v.m;window.scrollTo(0,0);if(TAB==="cc")renderCc()}
 document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 function ngo(y,m){if(m<1){m=12;y--}if(m>12){m=1;y++}nview={y,m};ls.set("kk-nview",JSON.stringify(nview));renderNCal()}
 
@@ -1296,11 +1402,17 @@ function renderNote(){renderNCal();renderNRem();renderNTags();drawNSheet()}
 function setKind(k,keepCat){kind=k;document.querySelectorAll("[data-k]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===k));
   if(!keepCat){if(k==="in"&&!INCATS.some(c=>c.k===cat))cat="pay";if(k==="out"&&!CATS.some(c=>c.k===cat))cat=(CATS[0]||{k:"other"}).k}drawChips()}
 function drawChips(){const box=$("catChips");box.replaceChildren();
-  (kind==="in"?INCATS:CATS).forEach(c=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=c.e+" "+c.n;b.setAttribute("aria-pressed",c.k===cat);b.onclick=()=>{cat=c.k;drawChips()};box.append(b)})}
+  (kind==="in"?INCATS:CATS).forEach(c=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=c.e+" "+c.n;b.setAttribute("aria-pressed",c.k===cat);b.onclick=()=>{cat=c.k;drawChips()};box.append(b)});drawECard()}
+/* 記「卡數」時揀還緊邊張卡 → 簽賬嗰邊自動標記最近一期已找 */
+var eCard=null;
+function drawECard(){const r=$("eCardRow");if(!r)return;const on=kind==="out"&&cat==="card";r.hidden=!on;r.replaceChildren();if(!on)return;
+  const L=ccCards();if(!L.some(c=>c.k===eCard))eCard=L[0].k;
+  const lab=document.createElement("span");lab.className="lab";lab.textContent="還邊張卡：";r.append(lab);
+  L.forEach(c=>r.append(ccChip(`${c.e} ${c.n}`,c.k===eCard,()=>{eCard=c.k;drawECard()})))}
 document.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>setKind(b.dataset.k));
 
 function resetForm(){editId=null;$("editBar").hidden=true;$("eSave").textContent="記低！";$("eAmt").value="";$("eNote").value="";$("eDate").value=sel||todayStr()}
-function startEdit(e){editId=e.id;cat=e.cat;setKind(e.kind||"out",true);$("eAmt").value=e.amt;$("eNote").value=e.note||"";$("eDate").value=e.date;
+function startEdit(e){editId=e.id;cat=e.cat;if(e.ccard)eCard=e.ccard;setKind(e.kind||"out",true);$("eAmt").value=e.amt;$("eNote").value=e.note||"";$("eDate").value=e.date;
   $("editBar").hidden=false;$("eSave").textContent="更新";drawSheet();$("eAmt").focus()}
 $("editCancel").onclick=()=>{resetForm();drawSheet()};
 
@@ -1397,11 +1509,13 @@ $("eSave").onclick=async()=>{
   if(!(amt>0)){toast("金額要大過 0 喎");return}if(!date){toast("揀返個日子先");return}if(!need())return;
   const b=$("eSave");b.disabled=true;
   const data={date,amt,cat,kind,note:$("eNote").value.trim()};
+  if(cat==="card"&&kind==="out")data.ccard=ccCards().some(c=>c.k===eCard)?eCard:ccCards()[0].k;
   try{
     if(editId){const old=entries.find(e=>e.id===editId);await db.doc("entries/"+editId).set({...data,ts:old?.ts||Date.now()});
       sel=date;resetForm();toast("改好咗 ✏️")}
     else{await db.collection("entries").add({...data,ts:Date.now()});$("eAmt").value="";$("eNote").value="";toast("記低咗 ✍️");$("eAmt").focus();
-      if(data.cat==="card"&&data.kind==="out"){const up=ccUnpaid();if(up.length)askCcPaid(up,data.amt)}}
+      if(data.cat==="card"&&data.kind==="out"){const up=ccUnpaid().filter(x=>x.card.k===data.ccard).sort((a,b)=>a.s.end<b.s.end?1:-1);
+        if(up.length)await markPaid(up[0].card.k,up[0].s.end,true)}}
     if(days[date]?.zero&&kind==="out")await db.doc("days/"+date).set({zero:false});
   }catch(e){toast("儲唔到："+(e.message||e.code||"再試吓"))}
   b.disabled=false;drawSheet()};
@@ -1485,9 +1599,9 @@ function bindSwipe(cal,step){let sx=0,sy=0,st=0,on=false;
     cal.classList.remove("sl-up","sl-dn");void cal.offsetWidth;cal.classList.add(up?"sl-dn":"sl-up");
   },{passive:false});
 }
-bindSwipe($("cal"),d=>go(view.y,view.m+d));bindSwipe($("ncal"),d=>ngo(nview.y,nview.m+d));
+bindSwipe($("cal"),d=>go(view.y,view.m+d));bindSwipe($("ncal"),d=>ngo(nview.y,nview.m+d));bindSwipe($("ccal"),d=>cgo(cview.y,cview.m+d));
 /* 頂部轉月掣：跟住而家睇緊邊個分頁 */
-const curV=()=>TAB==="note"?nview:view,goCur=(y,m)=>TAB==="note"?ngo(y,m):go(y,m);
+const curV=()=>TAB==="note"?nview:TAB==="cc"?cview:view,goCur=(y,m)=>TAB==="note"?ngo(y,m):TAB==="cc"?cgo(y,m):go(y,m);
 $("prev").onclick=()=>goCur(curV().y,curV().m-1);$("next").onclick=()=>goCur(curV().y,curV().m+1);
 $("yIn").onchange=()=>{const y=parseInt($("yIn").value);if(y>=2000&&y<=2100)goCur(y,curV().m);else $("yIn").value=curV().y};
 $("mIn").onchange=()=>goCur(curV().y,+$("mIn").value);
