@@ -392,6 +392,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     <h2 id="cccalH">📅 <span id="ccalTitle"></span> 簽賬 <small id="cmonthSum"></small></h2>
     <div class="cal" id="ccal"></div>
     <div class="legend"><span>格仔數字 = 當日簽賬總額（連非簽賬）</span><span style="color:var(--sun)">紅字 = 公眾假期</span><span>👆 撳日子睇明細同喺嗰日記一筆；上下撥 = 轉月</span></div>
+    <div class="hols" id="chols"></div>
     <div class="ccday" id="ccDay" hidden></div>
   </section>
   <section class="card" aria-labelledby="cclH">
@@ -1138,6 +1139,17 @@ function renderCc(){
     })});
   renderCcCal();renderCcCfg();renderCcCatCfg();
 }
+/* 公眾假期列表（上月・本月・下月），簽賬月曆用 */
+function fillHols(hb,y,m){if(!hb)return;hb.replaceChildren();
+  const pm=m===1?[y-1,12]:[y,m-1],nm=m===12?[y+1,1]:[y,m+1],keys=[pm,[y,m],nm].map(([a,b])=>`${a}-${pad(b)}-`);
+  const list=Object.keys(HOL).filter(k=>keys.some(p=>k.startsWith(p))).sort();
+  const h=document.createElement("div");h.style.fontWeight="900";h.textContent="🏖️ 公眾假期（上月・本月・下月）";holHead(h);hb.append(h);
+  if(!list.length){const p=document.createElement("div");p.className="hint";p.textContent=`${y}-${pad(m)}`>=HOL_UNTIL?"政府未公佈呢段時間嘅假期":"呢三個月冇公眾假期 (´;ω;`)";hb.append(p)}
+  list.forEach(k=>{const [yy,mm,dd]=k.split("-").map(Number),r=document.createElement("div");
+    if(!k.startsWith(keys[1]))r.classList.add("adjh");if(k<todayStr()){r.classList.add("past");r.title="已過"}
+    const b=document.createElement("b");b.textContent=`${mm}/${dd}（${WD[new Date(yy,mm-1,dd).getDay()]}）`;
+    const sp=document.createElement("span");sp.textContent=HOL[k];r.append(b,sp);hb.append(r)});
+}
 /* 簽賬月曆 */
 function cgo(y,m){if(m<1){m=12;y--}if(m>12){m=1;y++}cview={y,m};ls.set("kk-cview",JSON.stringify(cview));renderCcCal()}
 function ccDayCell(key,adj){
@@ -1166,6 +1178,7 @@ function renderCcCal(){
   const first=new Date(y,m-1,1).getDay(),n=dim(y,m),startKey=addDays(ds(y,m,1),-first),cells=Math.ceil((first+n)/7)*7;
   for(let i=0;i<cells;i++){const key=addDays(startKey,i);cal.append(ccDayCell(key,!key.startsWith(`${y}-${pad(m)}-`)))}
   const pre=`${y}-${pad(m)}-`,mm=(charges||[]).filter(c=>c.date.startsWith(pre));
+  fillHols($("chols"),y,m);
   $("cmonthSum").textContent=mm.length?`共 ${money(Math.round(mm.reduce((v,c)=>v+c.amt,0)*100)/100)}（唔計入結餘）`:"";
   const box=$("ccDay");box.replaceChildren();box.hidden=!ccSel;if(!ccSel)return;
   const [sy,sm,sd]=ccSel.split("-").map(Number),es=(charges||[]).filter(c=>c.date===ccSel).sort((a,b)=>(b.ts||0)-(a.ts||0));
