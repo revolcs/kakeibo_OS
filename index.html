@@ -777,9 +777,11 @@ function cycleStats(c){
 }
 /* 某日 23:59 嘅戶口結餘：由最近一次對數（settings.balance）推返去
    對數之後先記、日期喺嗰日或之前嘅紀錄 → 照加減；對數之前已記、日期喺嗰日之後嘅紀錄 → 扣返出嚟 */
+/* 對數嗰陣銀行已經計咗嘅紀錄 = 對數前已記、而且日期唔遲過對數嗰日（預先記嘅將來人工唔算） */
+function balDay(mb){if(mb.date)return mb.date;const d=new Date(mb.ts||0);return ds(d.getFullYear(),d.getMonth()+1,d.getDate())}
 function balAt(day){const mb=settings.balance;if(!mb||typeof mb.amt!=="number")return null;
-  let v=mb.amt;for(const e of entries){const s=e.kind==="in"?e.amt:-e.amt,after=(e.ts||0)>mb.ts;
-    if(after&&e.date<=day)v+=s;else if(!after&&e.date>day)v-=s}
+  const bd=balDay(mb);let v=mb.amt;for(const e of entries){const s=e.kind==="in"?e.amt:-e.amt,inBank=(e.ts||0)<=mb.ts&&e.date<=bd;
+    if(!inBank&&e.date<=day)v+=s;else if(inBank&&e.date>day)v-=s}
   return Math.round(v*100)/100}
 /* 上期剩低：有手動填就用手動；有對過戶口結餘就用「出糧前一日 23:59」嘅結餘；兩樣都冇先由上一期推算 */
 function carryOf(c,depth=0){
@@ -800,8 +802,7 @@ function renderCycle(){
   const futN=entries.filter(e=>e.date>t).length;
   /* 自己填咗結餘：用嗰個數，再加減之後新記嘅紀錄 */
   let bal=est;
-  if(mb&&typeof mb.amt==="number"){const after=entries.filter(e=>(e.ts||0)>mb.ts&&e.date<=t);
-    bal=mb.amt+after.filter(e=>e.kind==="in").reduce((s,e)=>s+e.amt,0)-after.filter(e=>e.kind!=="in").reduce((s,e)=>s+e.amt,0)}
+  if(mb&&typeof mb.amt==="number")bal=balAt(t);
   const pend=cd.pending||[],pendSum=pend.reduce((s,p)=>s+p.amt,0),free=bal-pendSum;
   const [,sm,sd]=c.start.split("-"),[,em,ed]=c.end.split("-");
   $("cycRange").textContent=`${+sm}/${+sd}（${payDates().includes(c.start)?"上次出糧":"月初"}）– ${+em}/${+ed}（下次出糧前一日${c.nextKnown?"":"・估計"}）`;
