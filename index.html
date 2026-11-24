@@ -385,8 +385,20 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     <div class="chips" id="ccCards" role="group" aria-label="信用卡"></div>
     <input class="amtin" id="cAmt" inputmode="decimal" placeholder="$0.00" aria-label="簽賬金額">
     <div class="chips" id="ccCats" role="group" aria-label="類別"></div>
+    <div class="quick" id="ccQuick" aria-label="用固定簽賬快速填" hidden></div>
     <input class="f" id="cNote" placeholder="備註（可以唔填），例：淘寶" aria-label="備註" autocomplete="off">
     <div class="brow"><input class="f num" id="cDate" type="date" aria-label="日期" style="flex:1"><button class="btn" id="cSave" type="button">記低！</button></div>
+  </section>
+  <section class="card" aria-labelledby="ccfxH">
+    <h2 id="ccfxH" class="foldh">📌 固定簽賬 <small>每月都有嘅簽賬（例：Netflix），撳「＋記一筆」就填好上面表格；🔒 鎖住唔會改錯，▲▼ 調次序</small><button class="foldbtn" type="button" aria-expanded="true" aria-label="收起或者打開固定簽賬">▾</button></h2>
+    <div id="ccFxList"></div>
+    <div class="addrow">
+      <input class="f" id="ccFxName" placeholder="名稱，例：Netflix" aria-label="固定簽賬名稱">
+      <input class="f num" id="ccFxAmt" inputmode="decimal" placeholder="金額" aria-label="固定簽賬金額" style="max-width:7em">
+      <select class="f" id="ccFxCard" aria-label="邊張卡"></select>
+      <select class="f" id="ccFxCat" aria-label="類別"></select>
+      <button class="mini acc" id="ccFxAdd" type="button">＋加</button>
+    </div>
   </section>
   <section class="card" aria-labelledby="cccalH">
     <h2 id="cccalH">📅 <span id="ccalTitle"></span> 簽賬 <small id="cmonthSum"></small></h2>
@@ -960,13 +972,13 @@ function renderCats(mm){
 /* 固定支出／待扣共用嘅一行：🔒 鎖住顯示數字，🔓 解鎖就變輸入框 */
 function guessCat(n){n=n||"";return /卡/.test(n)?"card":/電話|帳單|電費|水費/.test(n)?"bill":/月票|八達通|交通/.test(n)?"octo":/家用/.test(n)?"home":/儲/.test(n)?"save":/heartbeat/i.test(n)?"hb":"other"}
 function fxRow(p,o){
-  const c=ALL[p.cat||guessCat(p.name)]||ALL.other,r=document.createElement("div");r.className="fx";
+  const c=(o.catOf?o.catOf(p.cat):ALL[p.cat||guessCat(p.name)])||ALL.other,r=document.createElement("div");r.className="fx",dflt=o.subDef?o.subDef(p):c.n;
   const ic=document.createElement("span");ic.className="ic";ic.textContent=c.e;ic.style.background=c.c+"55";
   const lock=document.createElement("button");lock.type="button";lock.className="lock";lock.setAttribute("aria-pressed",!!p.locked);
   lock.textContent=p.locked?"🔒":"🔓";lock.setAttribute("aria-label",p.locked?"解鎖再改":"鎖住金額");
   lock.onclick=()=>o.save({locked:!p.locked});
   if(p.locked||HIDE){
-    const nm=document.createElement("div");nm.className="nm";nm.textContent=p.name;const sm=document.createElement("small");sm.textContent=p.sub||c.n;nm.append(sm);
+    const nm=document.createElement("div");nm.className="nm";nm.textContent=p.name;const sm=document.createElement("small");sm.textContent=p.sub||dflt;nm.append(sm);
     const a=document.createElement("div");a.className="amtc";a.append(money(p.amt)+" ",lock);
     r.append(ic,nm,a);
   }else{
@@ -982,7 +994,7 @@ function fxRow(p,o){
     r.append(ic,ed,a);
   }
   const acts=document.createElement("div");acts.className="acts";
-  {const sb=document.createElement("button");sb.type="button";sb.className="mini subedit";sb.textContent="✏️ 副標題："+(p.sub||c.n);sb.setAttribute("aria-label","修改副標題");sb.onclick=()=>openSubDlg(p.sub||"",v=>o.save({sub:v}));acts.append(sb)}
+  {const sb=document.createElement("button");sb.type="button";sb.className="mini subedit";sb.textContent="✏️ 副標題："+(p.sub||dflt);sb.setAttribute("aria-label","修改副標題");sb.onclick=()=>openSubDlg(p.sub||"",v=>o.save({sub:v}));acts.append(sb)}
   if(o.move)[["▲",-1,o.first,"上移"],["▼",1,o.last,"下移"]].forEach(([t,d,dis,l])=>{const b=document.createElement("button");b.type="button";b.className="mini";b.textContent=t;b.disabled=dis;b.setAttribute("aria-label",`${p.name} ${l}`);b.onclick=()=>o.move(d);acts.append(b)});
   (o.acts||[]).forEach(([t,fn])=>{const b=document.createElement("button");b.type="button";b.className="mini acc";b.textContent=t;b.onclick=fn;acts.append(b)});
   if(!p.locked&&o.del){const d=document.createElement("button");d.type="button";d.className="mini del";d.textContent="刪";
@@ -1148,7 +1160,7 @@ function renderCc(){
       if(!s.items.length){const e=document.createElement("div");e.className="empty";e.textContent="今期未有簽賬";box.append(e)}
       s.items.forEach(c=>box.append(ccRow(c)));
     })});
-  renderCcCal();renderCcCfg();renderCcCatCfg();
+  renderCcCal();renderCcCfg();renderCcCatCfg();renderCcFx();
 }
 /* 公眾假期列表（上月・本月・下月），簽賬月曆用 */
 function fillHols(hb,y,m){if(!hb)return;hb.replaceChildren();
@@ -1161,6 +1173,37 @@ function fillHols(hb,y,m){if(!hb)return;hb.replaceChildren();
     const b=document.createElement("b");b.textContent=`${mm}/${dd}（${WD[new Date(yy,mm-1,dd).getDay()]}）`;
     const sp=document.createElement("span");sp.textContent=HOL[k];r.append(b,sp);hb.append(r)});
 }
+/* 固定簽賬：存喺 ccfg/main.presets，每項綁一張卡（或非簽賬） */
+const ccPresets=()=>Array.isArray(ccfg.presets)?ccfg.presets:[];
+async function setCcPresets(list){if(!need())return false;try{await db.doc("ccfg/main").set({...ccfg,presets:list});return true}catch(e){toast("儲唔到");return false}}
+function ccFill(p){
+  ccEdit=null;ccCard=ccAll().some(c=>c.k===p.card)?p.card:ccCards()[0].k;
+  ccCat=ccCats().some(c=>c.k===p.cat)?p.cat:ccCats()[0].k;
+  $("cAmt").value=String(p.amt);$("cNote").value=p.name;renderCc();
+  $("cAmt").scrollIntoView({block:"center",behavior:"smooth"});
+}
+function renderCcFx(){
+  const box=$("ccFxList");if(!box||box.contains(document.activeElement))return;box.replaceChildren();
+  const ps=ccPresets(),q=$("ccQuick");q.replaceChildren();
+  if(!ps.length){const e=document.createElement("div");e.className="empty";e.textContent="未有固定簽賬，喺下面加第一項 (´,,•ω•,,)";box.append(e)}
+  ps.forEach((p,i)=>{
+    box.append(fxRow(p,{
+      catOf:k=>ccCatOf(k),subDef:x=>`${ccCardOf(x.card).e} ${ccCardOf(x.card).n}・${ccCatOf(x.cat).n}`,
+      save:patch=>setCcPresets(ps.map((r,j)=>j===i?{...r,...patch}:r)),
+      del:()=>setCcPresets(ps.filter((_,j)=>j!==i)),
+      move:d=>{const j=i+d;if(j<0||j>=ps.length)return;const a=[...ps];[a[i],a[j]]=[a[j],a[i]];setCcPresets(a)},first:i===0,last:i===ps.length-1,
+      acts:[["＋記一筆",()=>ccFill(p)]]}));
+    const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=`📌 ${p.name} ${short(p.amt)}`;b.onclick=()=>ccFill(p);q.append(b)});
+  q.hidden=!ps.length;
+  const sc=$("ccFxCard"),sk=$("ccFxCat"),pc=sc.value,pk=sk.value;sc.replaceChildren();sk.replaceChildren();
+  ccAll().forEach(c=>{const o=document.createElement("option");o.value=c.k;o.textContent=`${c.e} ${c.n}`;sc.append(o)});
+  ccCats().forEach(c=>{const o=document.createElement("option");o.value=c.k;o.textContent=`${c.e} ${c.n}`;sk.append(o)});
+  if(pc&&[...sc.options].some(o=>o.value===pc))sc.value=pc;if(pk&&[...sk.options].some(o=>o.value===pk))sk.value=pk;
+}
+$("ccFxAdd").onclick=()=>{const n=$("ccFxName").value.trim(),a=Math.round(parseFloat($("ccFxAmt").value)*100)/100;
+  if(!n||!(a>0)){toast("要填名同金額");return}
+  setCcPresets([...ccPresets(),{name:n,amt:a,card:$("ccFxCard").value,cat:$("ccFxCat").value,locked:true}]).then(ok=>{if(ok){toast(`📌 ${n} 已固定`);$("ccFxName").value="";$("ccFxAmt").value=""}})};
+$("ccFxName").onkeydown=$("ccFxAmt").onkeydown=e=>{if(e.key==="Enter")$("ccFxAdd").click()};
 /* 簽賬月曆 */
 function cgo(y,m){if(m<1){m=12;y--}if(m>12){m=1;y++}cview={y,m};ls.set("kk-cview",JSON.stringify(cview));renderCcCal()}
 function ccDayCell(key,adj){
@@ -1221,7 +1264,7 @@ function renderCcCatCfg(){
     const up=document.createElement("button");up.type="button";up.className="mini";up.textContent="▲";up.setAttribute("aria-label",`${c.n} 向上`);up.disabled=i===0;up.onclick=()=>mv(-1);
     const dn=document.createElement("button");dn.type="button";dn.className="mini";dn.textContent="▼";dn.setAttribute("aria-label",`${c.n} 向下`);dn.disabled=i===L.length-1;dn.onclick=()=>mv(1);
     const d=document.createElement("button");d.type="button";d.className="mini del";d.textContent="刪";
-    d.onclick=()=>{if((charges||[]).some(x=>x.cat===c.k)){toast("有簽賬用緊呢個類別，刪唔到");return}
+    d.onclick=()=>{if((charges||[]).some(x=>x.cat===c.k)||ccPresets().some(p=>p.cat===c.k)){toast("有簽賬或者固定簽賬用緊呢個類別，刪唔到");return}
       if(ccCats().length<=1){toast("最少要留一個類別");return}
       if(!d.dataset.arm){d.dataset.arm=1;d.textContent="確定？";setTimeout(()=>{if(d.isConnected){delete d.dataset.arm;d.textContent="刪"}},2500);return}
       setCcCats(ccCats().filter(x=>x.k!==c.k)).then(ok=>{if(ok)toast(`刪咗 ${c.n}`)})};
@@ -1258,7 +1301,7 @@ function renderCcCfg(){
     n.onkeydown=cu.onkeydown=ev=>{if(ev.key==="Enter")ev.target.blur()};
     r.addEventListener("focusout",ev=>{if(!r.contains(ev.relatedTarget))commit()});n.onchange=cu.onchange=()=>commit();
     const d=document.createElement("button");d.type="button";d.className="mini del";d.textContent="刪";
-    d.onclick=()=>{if((charges||[]).some(c=>c.card===card.k)){toast("有簽賬用緊呢張卡，刪唔到");return}
+    d.onclick=()=>{if((charges||[]).some(c=>c.card===card.k)||ccPresets().some(p=>p.card===card.k)){toast("有簽賬或者固定簽賬用緊呢張卡，刪唔到");return}
       if(ccCards().length<=1){toast("最少要留一張卡");return}
       if(!d.dataset.arm){d.dataset.arm=1;d.textContent="確定？";setTimeout(()=>{if(d.isConnected){delete d.dataset.arm;d.textContent="刪"}},2500);return}
       setCcfg(ccCards().filter(x=>x.k!==card.k)).then(ok=>{if(ok)toast(`刪咗 ${card.n}`)})};
