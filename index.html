@@ -1071,11 +1071,19 @@ function ccStmts(cardK){
   const cur=stmtOf(t,card.cut);if(!map.has(cur.end))map.set(cur.end,{...cur,items:[]});
   return [...map.values()].map(s=>{
     s.items.sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:(b.ts||0)-(a.ts||0));
-    s.total=Math.round(s.items.reduce((v,c)=>v+c.amt,0)*100)/100;
+    const R=v=>Math.round(v*100)/100;
+    s.total=R(s.items.filter(c=>!c.paid).reduce((v,c)=>v+c.amt,0));
+    s.paidAmt=R(s.items.filter(c=>c.paid).reduce((v,c)=>v+c.amt,0));
     s.closed=s.end<t;s.paid=s.items.length>0&&s.items.every(c=>c.paid);return s}).sort((a,b)=>a.end<b.end?1:-1);
 }
 function ccUnpaid(){const out=[];ccCards().forEach(card=>ccStmts(card.k).forEach(s=>{if(s.closed&&s.items.length&&!s.paid)out.push({card,s})}));return out}
 async function setCcfg(cards){if(!need())return false;try{await db.doc("ccfg/main").set({...ccfg,cards});return true}catch(e){toast("儲唔到");return false}}
+/* 單筆「已付」：已經自己付咗（現金／即時轉數等）嘅簽賬，唔再計入嗰期截數要找嘅數 */
+async function togglePaidOne(c){
+  if(!need())return;const {id,...d}=c;
+  try{if(c.paid){delete d.paid;delete d.paidAt}else{d.paid=true;d.paidAt=todayStr()}
+    await db.doc("charges/"+id).set(d);toast(c.paid?"已取消已付":"已標記已付 ✅，唔計入截數")}catch(e){toast("儲唔到")}
+}
 async function markPaid(cardK,end,on){
   if(!need())return;const card=ccCardOf(cardK),s=ccStmts(cardK).find(x=>x.end===end);if(!s)return;
   try{for(const c of s.items){const {id,...d}=c;if(on)await db.doc("charges/"+id).set({...d,paid:true,paidAt:todayStr()});else{delete d.paid;delete d.paidAt;await db.doc("charges/"+id).set(d)}}
@@ -1088,10 +1096,12 @@ function ccRow(c,showCard){
   const tx=document.createElement("div");tx.className="tx";tx.textContent=showCard?`${ccCardOf(c.card).e} ${ccCardOf(c.card).n}・${cat.n}`:`${ccMd(c.date)} ${cat.n}`;
   if(c.note){const sm=document.createElement("small");sm.textContent=c.note;tx.append(sm)}
   const a=document.createElement("div");a.className="a";a.textContent=money(c.amt);
+  const pb=document.createElement("button");pb.type="button";pb.className="mini"+(c.paid?"":" acc");pb.textContent=c.paid?"↺ 已付":"✓ 已付";
+  pb.setAttribute("aria-label",c.paid?"取消已付":"標記呢筆已付，唔計入截數");pb.onclick=ev=>{ev.stopPropagation();togglePaidOne(c)};
   const d=document.createElement("button");d.type="button";d.className="mini del";d.textContent="刪";d.setAttribute("aria-label","刪除呢筆簽賬");
   d.onclick=ev=>{ev.stopPropagation();if(!d.dataset.arm){d.dataset.arm=1;d.textContent="確定？";setTimeout(()=>{if(d.isConnected){delete d.dataset.arm;d.textContent="刪"}},2500);return}delCharge(c.id)};
   r.onclick=()=>{ccEdit=c.id;ccCard=c.card;ccCat=c.cat;$("cAmt").value=String(c.amt);$("cNote").value=c.note||"";$("cDate").value=c.date;renderCc();$("cAmt").scrollIntoView({block:"center",behavior:"smooth"})};
-  r.append(ic,tx,a,d);return r;
+  r.append(ic,tx,a,...(c.card==="none"?[]:[pb]),d);return r;
 }
 function renderCc(){
   if(!$("tabCc")||!Array.isArray(charges))return;
@@ -1104,8 +1114,8 @@ function renderCc(){
     const eb=document.createElement("button");eb.type="button";eb.className="mini ccedit";eb.textContent="✏️ 改";eb.setAttribute("aria-label",`改 ${card.n} 嘅名同截數日`);eb.onclick=()=>openCcEd(card.k);
     const hd=document.createElement("div");hd.className="cchead";hd.append(h,eb);d.append(hd,sub);
     const row=(l,v)=>{const r=document.createElement("div");r.className="ccrow";const a=document.createElement("span");a.textContent=l;const b=document.createElement("b");b.textContent=money(v);r.append(a,b);d.append(r)};
-    if(cur)row(`今期（${ccMd(cur.start)}–${ccMd(cur.end)}）`,cur.total);
-    if(last)row(`${ccMd(last.end)} 截數 ${last.paid?"✅ 已找":"⏳ 未找"}`,last.total);
+    if(cur)row(`今期（${ccMd(cur.start)}–${ccMd(cur.end)}）${cur.paidAmt?"・已付 "+money(cur.paidAmt)+" 唔計":""}`,cur.total);
+    if(last)row(`${ccMd(last.end)} 截數 ${last.paid?"✅ 已找":"⏳ 未找"}${last.paidAmt&&!last.paid?"・已付 "+money(last.paidAmt)+" 唔計":""}`,last.paid?last.paidAmt:last.total);
     sum.append(d)});
   const hasNone=(charges||[]).some(c=>c.card==="none");
   if(hasNone){const pre=todayStr().slice(0,8),tot=(charges||[]).filter(c=>c.card==="none"&&c.date.startsWith(pre)).reduce((v,c)=>v+c.amt,0);
@@ -1130,7 +1140,8 @@ function renderCc(){
       if(!s.items.length&&(s.closed||card.none))return;
       const h=document.createElement("div");h.className="dh";
       const l=document.createElement("span");l.textContent=card.none?`${card.e} ${card.n}・${+s.end.slice(5,7)}月`:`${card.e} ${card.n}・${ccMd(s.start)}–${ccMd(s.end)}${s.closed?(s.paid?" ✅ 已找":" ⏳ 未找"):"（未截數）"}`;
-      const r=document.createElement("span");r.textContent=money(s.total);h.append(l,r);box.append(h);
+      const r=document.createElement("span");r.textContent=money(s.paid?s.paidAmt:s.total);h.append(l,r);box.append(h);
+      if(s.paidAmt&&!s.paid){const n=document.createElement("div");n.className="hint";n.style.padding="2px 4px";n.textContent=`另有 ${money(s.paidAmt)} 已付，唔計入上面嘅數`;box.append(n)}
       if(s.closed&&s.items.length&&!card.none){const w=document.createElement("div");w.className="ccact";
         const b=document.createElement("button");b.type="button";b.className="mini"+(s.paid?"":" acc");b.textContent=s.paid?"↺ 取消已找":"✅ 標記已找數";
         b.onclick=()=>markPaid(card.k,s.end,!s.paid);w.append(b);box.append(w)}
