@@ -972,7 +972,7 @@ function catScope(mm){
 }
 function pieSvg(rows,tot,sum){
   const NS="http://www.w3.org/2000/svg",svg=document.createElementNS(NS,"svg");svg.setAttribute("viewBox","0 0 42 42");svg.setAttribute("role","img");
-  svg.setAttribute("aria-label","支出比例："+rows.map(c=>`${c.n} ${(tot[c.k]/sum*100).toFixed(1)}%`).join("、"));
+  svg.setAttribute("aria-label","支出比例："+rows.map(c=>HIDE?c.n:`${c.n} ${(tot[c.k]/sum*100).toFixed(1)}%`).join("、"));
   const ring=document.createElementNS(NS,"circle");[["cx",21],["cy",21],["r",15.9155],["fill","none"],["stroke","var(--tile)"],["stroke-width",7]].forEach(([k,v])=>ring.setAttribute(k,v));svg.append(ring);
   let acc=0;rows.forEach(c=>{const pct=tot[c.k]/sum*100,cc=document.createElementNS(NS,"circle");
     [["cx",21],["cy",21],["r",15.9155],["fill","none"],["stroke",c.c],["stroke-width",7],["stroke-dasharray",`${Math.max(pct-(rows.length>1?.5:0),.01)} ${100-Math.max(pct-(rows.length>1?.5:0),.01)}`],["stroke-dashoffset",25-acc],["transform","rotate(0 21 21)"]].forEach(([k,v])=>cc.setAttribute(k,v));
@@ -989,8 +989,8 @@ function renderCats(mm){
   const mk=(items)=>{const g=document.createElement("div");g.className="chips";g.setAttribute("role","group");items.forEach(([t,on,fn])=>g.append(ccChip(t,on,fn)));return g};
   ctl.append(
     mk([["📅 按月",catRange==="month",()=>{catRange="month";ls.set("kk-cat-range","month");again()}],["💰 按出糧期",catRange==="cycle",()=>{catRange="cycle";ls.set("kk-cat-range","cycle");again()}]]),
-    mk([["🐷 計儲蓄",catSav==="in",()=>{catSav="in";ls.set("kk-cat-sav","in");again()}],["🚫 唔計儲蓄",catSav==="ex",()=>{catSav="ex";ls.set("kk-cat-sav","ex");again()}]]),
-    mk([["📊 條形圖",catView==="bar",()=>{catView="bar";ls.set("kk-cat-view","bar");again()}],["🍩 Pie chart",catView==="pie",()=>{catView="pie";ls.set("kk-cat-view","pie");again()}]]));
+    mk([["🐷 +儲蓄",catSav==="in",()=>{catSav="in";ls.set("kk-cat-sav","in");again()}],["🚫 -儲蓄",catSav==="ex",()=>{catSav="ex";ls.set("kk-cat-sav","ex");again()}]]),
+    mk([["📊 條形圖",catView==="bar",()=>{catView="bar";ls.set("kk-cat-view","bar");again()}],["🍩 圓餅圖",catView==="pie",()=>{catView="pie";ls.set("kk-cat-view","pie");again()}]]));
   box.append(ctl);
   /* 收入：人工 ＋ 其他收入 ＝ 全收入（跟住上面揀嘅範圍） */
   const ins=list.filter(e=>e.kind==="in"),ip=ins.filter(e=>e.cat==="pay").reduce((s,e)=>s+e.amt,0),all=ins.reduce((s,e)=>s+e.amt,0),io=Math.round((all-ip)*100)/100;
@@ -1009,7 +1009,7 @@ function renderCats(mm){
     const w=document.createElement("div");w.className="pie";w.append(pieSvg(rows,tot,sum));
     const lg=document.createElement("div");lg.className="pieleg";
     rows.forEach(c=>{const d=document.createElement("div"),sw=document.createElement("i");sw.style.background=c.c;
-      const n=document.createElement("span");n.textContent=c.e+" "+c.n;const b=document.createElement("b");b.textContent=(tot[c.k]/sum*100).toFixed(1)+"%";d.append(sw,n,b);lg.append(d)});
+      const n=document.createElement("span");n.textContent=c.e+" "+c.n;const b=document.createElement("b");b.textContent=HIDE?"**%":(tot[c.k]/sum*100).toFixed(1)+"%";d.append(sw,n,b);lg.append(d)});
     w.append(lg);box.append(w);return}
   const max=Math.max(...rows.map(c=>tot[c.k]));
   rows.forEach(c=>{const r=document.createElement("div");r.className="cr";
