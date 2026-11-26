@@ -899,7 +899,13 @@ function renderCal(){
   for(let i=0;i<cells;i++){const key=addDays(startKey,i);const adj=!key.startsWith(`${y}-${pad(m)}-`);cal.append(dayCell(key,adj));shown.push(key)}
   const mm=entries.filter(e=>e.date.startsWith(`${y}-${pad(m)}-`));
   const mo=mm.filter(e=>e.kind!=="in"&&e.cat!=="save").reduce((s,e)=>s+e.amt,0);
-  $("monthSum").textContent=`支出 ${money(mo)}（唔計儲蓄）`;
+  /* 三部分：月份標題／出糧期支出／整個月支出（兩個支出都唔計儲蓄）。
+     出糧期 = 今日喺呢個月就用今日所屬嗰期，睇其他月份就用嗰個月 15 號所屬嗰期 */
+  {const t=todayStr(),ref=t.startsWith(`${y}-${pad(m)}-`)?t:ds(y,m,15),c=cycleOf(ref),cs=cycleStats(c),co=cs.out-cs.save;
+    const ms=$("monthSum");ms.replaceChildren();
+    const l1=document.createElement("span"),l2=document.createElement("span");l1.style.display=l2.style.display="block";
+    l1.textContent=`出糧期 ${ccMd(c.start)}–${ccMd(c.end)} 支出 ${money(co)}（唔計儲蓄）`;
+    l2.textContent=`${m}月 支出 ${money(mo)}（唔計儲蓄）`;ms.append(l1,l2)}
   /* 假期：本月＋上下個月 */
   const hb=$("hols");hb.replaceChildren();
   const pm=m===1?[y-1,12]:[y,m-1],nm=m===12?[y+1,1]:[y,m+1];
@@ -1467,6 +1473,11 @@ $("nAddToday").onclick=()=>openNSheet(todayStr());
 function renderNote(){renderNCal();renderNRem();renderNTags();drawNSheet()}
 
 /* sheet */
+/* 金額欄：只留數字同一個小數點（全形數字會轉做半形） */
+function numOnly(el){const fix=()=>{let v=el.value.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-65248)).replace(/[．。]/g,".").replace(/[^\d.]/g,"");
+    const i=v.indexOf(".");if(i>=0)v=v.slice(0,i+1)+v.slice(i+1).replace(/\./g,"");if(v!==el.value)el.value=v};
+  el.addEventListener("input",fix);el.addEventListener("change",fix);el.addEventListener("blur",fix)}
+numOnly($("eAmt"));numOnly($("cAmt"));
 function setKind(k,keepCat){kind=k;document.querySelectorAll("[data-k]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===k));
   if(!keepCat){if(k==="in"&&!INCATS.some(c=>c.k===cat))cat="pay";if(k==="out"&&!CATS.some(c=>c.k===cat))cat=(CATS[0]||{k:"other"}).k}drawChips()}
 function drawChips(){const box=$("catChips");box.replaceChildren();
