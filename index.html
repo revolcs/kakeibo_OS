@@ -15,6 +15,18 @@
 .ccdayh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:900}
 .ccsubh{font-weight:900;margin:10px 0 6px;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
 #eCardRow .lab{font-weight:900;font-size:.85rem;align-self:center}
+.catctl{display:flex;flex-direction:column;gap:6px;margin:0 0 10px}
+.catctl .chips{gap:6px}.catctl .chip{padding:5px 11px;font-size:.82rem}
+.catsum{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;font-weight:900;margin:10px 0 8px}
+.catsum small{font-weight:700;color:var(--soft)}
+.pie{display:flex;flex-direction:column;align-items:center;gap:12px}
+.pie svg{width:200px;max-width:70%;height:auto}
+.pieleg{display:grid;grid-template-columns:1fr 1fr;gap:5px 14px;width:100%;font-size:.86rem}
+.pieleg div{display:flex;align-items:center;gap:6px;min-width:0}
+.pieleg i{width:12px;height:12px;border-radius:4px;flex:none}
+.pieleg span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pieleg b{margin-left:auto;font-family:var(--f-num);font-size:.84rem}
+@media (max-width:360px){.pieleg{grid-template-columns:1fr}}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;700;900&family=Space+Mono:wght@700&display=swap">
@@ -951,17 +963,54 @@ async function setSumLabel(k,v){
   const m={...(settings.sumLabels||{})};if(v)m[k]=v;else delete m[k];
   try{await db.doc("settings/main").set({...settings,sumLabels:m});toast(v?"已改名 ✏️":"已還原原名")}catch(e){toast("儲唔到")}
 }
+/* 本月錢去咗邊：按月／按出糧期、計唔計儲蓄、條形／Pie 切換（記喺 localStorage） */
+var catRange=ls.get("kk-cat-range")==="cycle"?"cycle":"month",catSav=ls.get("kk-cat-sav")==="ex"?"ex":"in",catView=ls.get("kk-cat-view")==="pie"?"pie":"bar",lastMm=[];
+function catScope(mm){
+  if(catRange!=="cycle")return {list:mm,label:`${view.m}月`,cyc:false};
+  const t=todayStr(),{y,m}=view,ref=t.startsWith(`${y}-${pad(m)}-`)?t:ds(y,m,15),c=cycleOf(ref);
+  return {list:entries.filter(e=>e.date>=c.start&&e.date<=c.end),label:`出糧期 ${ccMd(c.start)}–${ccMd(c.end)}`,cyc:true};
+}
+function pieSvg(rows,tot,sum){
+  const NS="http://www.w3.org/2000/svg",svg=document.createElementNS(NS,"svg");svg.setAttribute("viewBox","0 0 42 42");svg.setAttribute("role","img");
+  svg.setAttribute("aria-label","支出比例："+rows.map(c=>`${c.n} ${(tot[c.k]/sum*100).toFixed(1)}%`).join("、"));
+  const ring=document.createElementNS(NS,"circle");[["cx",21],["cy",21],["r",15.9155],["fill","none"],["stroke","var(--tile)"],["stroke-width",7]].forEach(([k,v])=>ring.setAttribute(k,v));svg.append(ring);
+  let acc=0;rows.forEach(c=>{const pct=tot[c.k]/sum*100,cc=document.createElementNS(NS,"circle");
+    [["cx",21],["cy",21],["r",15.9155],["fill","none"],["stroke",c.c],["stroke-width",7],["stroke-dasharray",`${Math.max(pct-(rows.length>1?.5:0),.01)} ${100-Math.max(pct-(rows.length>1?.5:0),.01)}`],["stroke-dashoffset",25-acc],["transform","rotate(0 21 21)"]].forEach(([k,v])=>cc.setAttribute(k,v));
+    svg.append(cc);acc+=pct});
+  const t1=document.createElementNS(NS,"text");[["x",21],["y",20],["text-anchor","middle"],["font-size","3"],["fill","var(--soft)"]].forEach(([k,v])=>t1.setAttribute(k,v));t1.textContent="總支出";
+  const t2=document.createElementNS(NS,"text");[["x",21],["y",25],["text-anchor","middle"],["font-size","3.4"],["font-weight","900"],["fill","var(--ink)"]].forEach(([k,v])=>t2.setAttribute(k,v));t2.textContent=money(Math.round(sum*100)/100);
+  svg.append(t1,t2);return svg;
+}
 function renderCats(mm){
-  const box=$("cats");box.replaceChildren();
-  /* 本月收入：人工 ＋ 其他收入 ＝ 全收入 */
-  const ins=mm.filter(e=>e.kind==="in"),ip=ins.filter(e=>e.cat==="pay").reduce((s,e)=>s+e.amt,0),all=ins.reduce((s,e)=>s+e.amt,0),io=Math.round((all-ip)*100)/100;
+  lastMm=mm;const box=$("cats");box.replaceChildren();
+  const sc=catScope(mm),list=sc.list,again=()=>renderCats(lastMm);
+  /* 切換列 */
+  const ctl=document.createElement("div");ctl.className="catctl";
+  const mk=(items)=>{const g=document.createElement("div");g.className="chips";g.setAttribute("role","group");items.forEach(([t,on,fn])=>g.append(ccChip(t,on,fn)));return g};
+  ctl.append(
+    mk([["📅 按月",catRange==="month",()=>{catRange="month";ls.set("kk-cat-range","month");again()}],["💰 按出糧期",catRange==="cycle",()=>{catRange="cycle";ls.set("kk-cat-range","cycle");again()}]]),
+    mk([["🐷 計儲蓄",catSav==="in",()=>{catSav="in";ls.set("kk-cat-sav","in");again()}],["🚫 唔計儲蓄",catSav==="ex",()=>{catSav="ex";ls.set("kk-cat-sav","ex");again()}]]),
+    mk([["📊 條形圖",catView==="bar",()=>{catView="bar";ls.set("kk-cat-view","bar");again()}],["🍩 Pie chart",catView==="pie",()=>{catView="pie";ls.set("kk-cat-view","pie");again()}]]));
+  box.append(ctl);
+  /* 收入：人工 ＋ 其他收入 ＝ 全收入（跟住上面揀嘅範圍） */
+  const ins=list.filter(e=>e.kind==="in"),ip=ins.filter(e=>e.cat==="pay").reduce((s,e)=>s+e.amt,0),all=ins.reduce((s,e)=>s+e.amt,0),io=Math.round((all-ip)*100)/100;
+  const hintOn=sc.cyc?"按出糧期計，出糧日嗰日起計":"按曆月計，出糧日記入當月";
   const sm=document.createElement("div");sm.className="incsum";
-  [["pay","💼",ip,ip?"按曆月計，出糧日記入當月":"本月未有人工；按曆月計，出糧日記入當月就會顯示"],["inother","🎁",io],["all","💰",Math.round((ip+io)*100)/100]].forEach(([k,em,v,h])=>{const d=document.createElement("div");const s=document.createElement("span");s.textContent=em+" "+sumLab(k);s.append(sumEditBtn(k));const b=document.createElement("b");b.textContent=money(v);d.append(s,b);if(h){const t=document.createElement("small");t.className="ih";t.textContent=h;d.append(t)}sm.append(d)});
+  [["pay","💼",ip,ip?hintOn:(sc.cyc?"呢期未有人工":"本月未有人工；按曆月計，出糧日記入當月就會顯示")],["inother","🎁",io],["all","💰",Math.round((ip+io)*100)/100]].forEach(([k,em,v,h])=>{const d=document.createElement("div");const s=document.createElement("span");s.textContent=em+" "+sumLab(k);s.append(sumEditBtn(k));const b=document.createElement("b");b.textContent=money(v);d.append(s,b);if(h){const t=document.createElement("small");t.className="ih";t.textContent=h;d.append(t)}sm.append(d)});
   renderCatTitle();
   box.append(sm);
-  const tot={};mm.filter(e=>e.kind!=="in").forEach(e=>tot[e.cat]=(tot[e.cat]||0)+e.amt);
+  const tot={};list.filter(e=>e.kind!=="in"&&(catSav==="in"||e.cat!=="save")).forEach(e=>tot[e.cat]=(tot[e.cat]||0)+e.amt);
   const rows=CATS_ALL.filter(c=>tot[c.k]).sort((a,b)=>tot[b.k]-tot[a.k]);
-  if(!rows.length){const p=document.createElement("div");p.className="empty";p.textContent="呢個月未有紀錄，撳月曆日子開始記 (´,,•ω•,,)";box.append(p);return}
+  const sum=rows.reduce((v,c)=>v+tot[c.k],0);
+  const hd=document.createElement("div");hd.className="catsum";const hl=document.createElement("span");hl.textContent=`${sc.label} 支出（${catSav==="in"?"已包儲蓄":"唔計儲蓄"}）`;
+  const hr=document.createElement("span");hr.textContent=money(Math.round(sum*100)/100);hd.append(hl,hr);box.append(hd);
+  if(!rows.length){const p=document.createElement("div");p.className="empty";p.textContent=sc.cyc?"呢個出糧期未有支出紀錄 (´,,•ω•,,)":"呢個月未有紀錄，撳月曆日子開始記 (´,,•ω•,,)";box.append(p);return}
+  if(catView==="pie"){
+    const w=document.createElement("div");w.className="pie";w.append(pieSvg(rows,tot,sum));
+    const lg=document.createElement("div");lg.className="pieleg";
+    rows.forEach(c=>{const d=document.createElement("div"),sw=document.createElement("i");sw.style.background=c.c;
+      const n=document.createElement("span");n.textContent=c.e+" "+c.n;const b=document.createElement("b");b.textContent=(tot[c.k]/sum*100).toFixed(1)+"%";d.append(sw,n,b);lg.append(d)});
+    w.append(lg);box.append(w);return}
   const max=Math.max(...rows.map(c=>tot[c.k]));
   rows.forEach(c=>{const r=document.createElement("div");r.className="cr";
     const l=document.createElement("span");l.textContent=c.e+" "+c.n;
