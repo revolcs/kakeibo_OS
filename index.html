@@ -899,7 +899,8 @@ function renderCal(){
   for(let i=0;i<cells;i++){const key=addDays(startKey,i);const adj=!key.startsWith(`${y}-${pad(m)}-`);cal.append(dayCell(key,adj));shown.push(key)}
   const mm=entries.filter(e=>e.date.startsWith(`${y}-${pad(m)}-`));
   const mo=mm.filter(e=>e.kind!=="in"&&e.cat!=="save").reduce((s,e)=>s+e.amt,0);
-  $("monthSum").textContent=`${m}月 支出 ${money(mo)}（唔計儲蓄）`;
+  {const moAll=mm.filter(e=>e.kind!=="in").reduce((s,e)=>s+e.amt,0),ms=$("monthSum");ms.replaceChildren();
+    [`${m}月 支出 ${money(mo)}（唔計儲蓄）`,`${m}月 支出 ${money(moAll)}（已包儲蓄）`].forEach(t=>{const l=document.createElement("span");l.style.display="block";l.textContent=t;ms.append(l)})}
   /* 假期：本月＋上下個月 */
   const hb=$("hols");hb.replaceChildren();
   const pm=m===1?[y-1,12]:[y,m-1],nm=m===12?[y+1,1]:[y,m+1];
