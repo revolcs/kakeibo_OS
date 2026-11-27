@@ -1520,7 +1520,8 @@ function renderNote(){renderNCal();renderNRem();renderNTags();drawNSheet()}
 /* 金額欄：只留數字同一個小數點（全形數字會轉做半形） */
 function numOnly(el){const fix=()=>{let v=el.value.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-65248)).replace(/[．。]/g,".").replace(/[^\d.]/g,"");
     const i=v.indexOf(".");if(i>=0)v=v.slice(0,i+1)+v.slice(i+1).replace(/\./g,"");if(v!==el.value)el.value=v};
-  el.addEventListener("input",fix);el.addEventListener("change",fix);el.addEventListener("blur",fix)}
+  el.autocomplete="off";el.addEventListener("input",fix);el.addEventListener("change",fix);el.addEventListener("blur",fix);el.addEventListener("focus",fix);
+  fix();setTimeout(fix,300);setTimeout(fix,1500);window.addEventListener("pageshow",fix);document.addEventListener("visibilitychange",fix)}
 numOnly($("eAmt"));numOnly($("cAmt"));
 function setKind(k,keepCat){kind=k;document.querySelectorAll("[data-k]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===k));
   if(!keepCat){if(k==="in"&&!INCATS.some(c=>c.k===cat))cat="pay";if(k==="out"&&!CATS.some(c=>c.k===cat))cat=(CATS[0]||{k:"other"}).k}drawChips()}
